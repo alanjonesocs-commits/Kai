@@ -35,7 +35,9 @@ fun mergeBundles(local: MemBundle, remote: MemBundle, nowIso: String): MemBundle
         val b = remoteById[id]
         when {
             a == null -> b!!
+
             b == null -> a
+
             else -> pickWinner(a, b).copy(
                 deletedAt = listOfNotNull(a.deletedAt, b.deletedAt).minOrNull(),
             )
