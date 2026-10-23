@@ -16,29 +16,32 @@ jobs:
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
-          
+
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
-          
+
       - name: Set execution flag for gradlew
         run: chmod +x gradlew
-        
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
-          
+
       - name: Install Android Build Tools
         run: |
           sdkmanager "build-tools;36.0.0"
           sdkmanager "build-tools;29.0.3"
-          
+
       - name: Build APK
         run: bash ./gradlew :androidApp:assembleFossDebug --stacktrace
-        
+
+      - name: Print Debug Keystore SHA1
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
