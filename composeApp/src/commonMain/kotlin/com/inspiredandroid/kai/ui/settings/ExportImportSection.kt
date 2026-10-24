@@ -70,6 +70,12 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonObject
 import org.jetbrains.compose.resources.stringResource
+// NIA IMPORTS
+import com.inspiredandroid.kai.nia.memory.MemBundle
+import com.inspiredandroid.kai.nia.memory.PamManifest
+import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
+import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
+import com.inspiredandroid.kai.nia.sync.mergeBundles
 
 @Composable
 internal fun ExportImportSection(
@@ -95,6 +101,37 @@ internal fun ExportImportSection(
                         val jsonObject = SharedJson.parseToJsonElement(jsonString).jsonObject
                         val detectedSections = detectImportSections(jsonObject).toImmutableMap()
                         importPreview = jsonString to detectedSections
+                    } catch (_: Exception) {
+                        importResult = ImportResult.Failure
+                    }
+                }
+            }
+        }
+    } else {
+        null
+    }
+
+    // NIA FILE PICKER
+    val niaFilePickerLauncher = if (!isPreview) {
+        rememberFilePickerLauncher(
+            type = FileKitType.File(extensions = listOf("mem")),
+        ) { file ->
+            if (file != null) {
+                scope.launch {
+                    try {
+                        val bytes = file.readBytes()
+                        val text = bytes.decodeToString()
+                        val episodes = MemBundle.parseEpisodes(text)
+                        val nowIso = "2026-10-24T21:40:00Z"
+                        
+                        val currentJson = onExportSettings(setOf(ImportSection.MEMORY))
+                        val currentBundle = kaiJsonToMemBundle(currentJson, nowIso)
+                        val remoteBundle = MemBundle(PamManifest("remote", nowIso, 1, ""), episodes)
+                        
+                        val merged = mergeBundles(currentBundle, remoteBundle, nowIso)
+                        val newJson = memBundleToKaiJson(merged, currentJson)
+                        
+                        importResult = onImportSettings(newJson.encodeToByteArray(), setOf(ImportSection.MEMORY), true)
                     } catch (_: Exception) {
                         importResult = ImportResult.Failure
                     }
@@ -146,8 +183,7 @@ internal fun ExportImportSection(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
-    // FlowRow so the two buttons drop onto separate lines at large font scales
-    // instead of squeezing the second one until its label breaks mid-word.
+    
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
             onClick = {
@@ -168,6 +204,52 @@ internal fun ExportImportSection(
             Text(stringResource(Res.string.settings_import))
         }
     }
+
+    // NIA PORTABLE MEMORY SECTION
+    Spacer(Modifier.height(24.dp))
+    Text(
+        text = "NIA Portable Memory",
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onBackground,
+    )
+    Spacer(Modifier.height(4.dp))
+    Text(
+        text = "Export or import NIA memory as a portable .mem bundle.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(12.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(
+            onClick = {
+                importResult = null
+                val nowIso = "2026-10-24T21:40:00Z"
+                val kaiJson = onExportSettings(setOf(ImportSection.MEMORY))
+                val bundle = kaiJsonToMemBundle(kaiJson, nowIso)
+                val memString = bundle.toJsonLines()
+                scope.launch {
+                    saveFileToDevice(
+                        bytes = memString.encodeToByteArray(),
+                        baseName = "nia-memory",
+                        extension = "mem",
+                    )
+                }
+            },
+            modifier = Modifier.handCursor(),
+        ) {
+            Text("Export NIA Memory (.mem)")
+        }
+        OutlinedButton(
+            onClick = {
+                importResult = null
+                niaFilePickerLauncher?.launch()
+            },
+            modifier = Modifier.handCursor(),
+        ) {
+            Text("Import NIA Memory (.mem)")
+        }
+    }
+
     if (importResult != null) {
         Spacer(Modifier.height(8.dp))
         val (text, color) = when (val result = importResult!!) {
@@ -377,14 +459,4 @@ private fun ExportPreviewDialog(
 @Composable
 private fun sectionDisplayName(section: ImportSection): String = when (section) {
     ImportSection.SERVICES -> stringResource(Res.string.settings_import_section_services)
-    ImportSection.SOUL -> stringResource(Res.string.settings_import_section_soul)
-    ImportSection.MEMORY -> stringResource(Res.string.settings_import_section_memory)
-    ImportSection.SCHEDULING -> stringResource(Res.string.settings_import_section_scheduling)
-    ImportSection.HEARTBEAT -> stringResource(Res.string.settings_import_section_heartbeat)
-    ImportSection.EMAIL -> stringResource(Res.string.settings_import_section_email)
-    ImportSection.SMS -> stringResource(Res.string.settings_sms)
-    ImportSection.SPLINTERLANDS -> "Splinterlands"
-    ImportSection.TOOLS -> stringResource(Res.string.settings_import_section_tools)
-    ImportSection.MCP -> stringResource(Res.string.settings_import_section_mcp)
-    ImportSection.CONVERSATIONS -> stringResource(Res.string.settings_import_section_conversations)
-}
+    ImportSection.SOUL ->
