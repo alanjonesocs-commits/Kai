@@ -2,10 +2,13 @@ package com.inspiredandroid.kai.nia.memory
 
 import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
+import kotlinx.serialization.json.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 private const val ID_PREFIX = "mem_"
+private val kaiJson = Json { ignoreUnknownKeys = true; prettyPrint = true; explicitNulls = false }
+private val knownKaiKeys = setOf("key", "content", "category", "hitCount", "source")
 
 @OptIn(ExperimentalTime::class)
 internal fun millisToIso(millis: Long): String = Instant.fromEpochMilliseconds(millis).toString()
@@ -37,10 +40,6 @@ fun PamEpisode.toMemoryEntry(): MemoryEntry {
     )
 }
 
-/**
- * Snapshots Kai's memories as a bundle. Kai has no tombstones, so pass the previous
- * bundle: anything that was in it but is gone now is recorded as deleted at [nowIso].
- */
 fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBundle? = null): MemBundle {
     val live = entries.map { it.toPamEpisode() }
     val liveIds = live.map { it.id }.toSet()
@@ -56,9 +55,52 @@ fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBu
     return MemBundle(manifest, (live + tombstones).sortedBy { it.id })
 }
 
-/** Live memories from a bundle. Deleted and malformed episodes are skipped, never fatal. */
 fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> = bundle.episodes
     .filter { it.deletedAt == null }
     .mapNotNull { runCatching { it.toMemoryEntry() }.getOrNull() }
     .sortedWith(compareBy({ it.createdAt }, { it.key }))
-// Nia memory bridge
+
+// --- JSON BRIDGES (Required by ExportImportSection.kt) ---
+
+fun kaiJsonToMemBundle(kaiSettingsJson: String, nowIso: String): MemBundle {
+    val root = runCatching { kaiJson.parseToJsonElement(kaiSettingsJson) }.getOrNull()?.jsonObject ?: JsonObject(emptyMap())
+    val memArray = (root["memory"] as? JsonArray) ?: (root["memories"] as? JsonArray) ?: JsonArray(emptyList())
+
+    val episodes = memArray.mapNotNull { el ->
+        val obj = el as? JsonObject ?: return@mapNotNull null
+        val key = obj["key"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+        val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: ""
+        val category = obj["category"]?.jsonPrimitive?.contentOrNull
+        val hitCount = obj["hitCount"]?.jsonPrimitive?.intOrNull ?: 0
+        val source = obj["source"]?.jsonPrimitive?.contentOrNull
+
+        val extra = obj.filterKeys { it !in knownKaiKeys }
+            .mapValues { (_, v) -> (v as? JsonPrimitive)?.contentOrNull ?: v.toString() }
+
+        val originalTimestamp = obj["timestamp"]?.jsonPrimitive?.contentOrNull ?: nowIso
+
+        PamEpisode(
+            id = "mem_$key", timestamp = originalTimestamp, key = key, content = content,
+            category = category, hitCount = hitCount, source = source, extra = extra
+        )
+    }
+    val manifest = PamManifest(bundleId = "nia_$nowIso", createdAt = nowIso, schemaVersion = 1, checksum = "")
+    return MemBundle(manifest, episodes)
+}
+
+fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
+    val root = runCatching { kaiJson.parseToJsonElement(originalKaiJson) }.getOrNull()?.jsonObject ?: JsonObject(emptyMap())
+    val live = bundle.episodes.filter { it.deletedAt == null }
+    val newMemory = JsonArray(live.map { ep ->
+        buildJsonObject {
+            put("key", ep.key); put("content", ep.content)
+            ep.category?.let { put("category", it) }
+            put("hitCount", ep.hitCount)
+            ep.source?.let { put("source", it) }
+            ep.extra.forEach { (k, v) -> put(k, v) }
+        }
+    })
+    val memoryKey = if (root.containsKey("memories") && !root.containsKey("memory")) "memories" else "memory"
+    val newRoot = JsonObject(root.toMutableMap().apply { put(memoryKey, newMemory) })
+    return kaiJson.encodeToString(JsonObject.serializer(), newRoot)
+}
