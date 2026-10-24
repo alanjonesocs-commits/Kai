@@ -15,13 +15,19 @@ internal fun normaliseIso(ts: String): String {
     }
 }
 
-private fun effectiveTime(ep: PamEpisode): String = normaliseIso(ep.updatedAt ?: ep.timestamp)
+/** When the episode's latest action happened: its deletion time if deleted, otherwise its last edit. */
+private fun actionTime(ep: PamEpisode): String = normaliseIso(ep.deletedAt ?: ep.updatedAt ?: ep.timestamp)
 
+/**
+ * Most recent action wins, whether that was an edit, a re-add or a delete.
+ * Exact ties: delete wins, then higher hitCount, then a stable text comparison.
+ */
 private fun pickWinner(a: PamEpisode, b: PamEpisode): PamEpisode {
-    val ta = effectiveTime(a)
-    val tb = effectiveTime(b)
+    val ta = actionTime(a)
+    val tb = actionTime(b)
     return when {
         ta != tb -> if (ta > tb) a else b
+        (a.deletedAt != null) != (b.deletedAt != null) -> if (a.deletedAt != null) a else b
         a.hitCount != b.hitCount -> if (a.hitCount > b.hitCount) a else b
         else -> if (a.toString() >= b.toString()) a else b
     }
@@ -35,12 +41,8 @@ fun mergeBundles(local: MemBundle, remote: MemBundle, nowIso: String): MemBundle
         val b = remoteById[id]
         when {
             a == null -> b!!
-
             b == null -> a
-
-            else -> pickWinner(a, b).copy(
-                deletedAt = listOfNotNull(a.deletedAt, b.deletedAt).minOrNull(),
-            )
+            else -> pickWinner(a, b)
         }
     }
     val manifest = PamManifest(
