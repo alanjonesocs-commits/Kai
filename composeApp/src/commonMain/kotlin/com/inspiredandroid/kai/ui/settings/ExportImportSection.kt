@@ -121,14 +121,14 @@ internal fun ExportImportSection(
                         val text = bytes.decodeToString()
                         val episodes = MemBundle.parseEpisodes(text)
                         val nowIso = "2026-10-24T21:40:00Z"
-                        
+
                         val currentJson = onExportSettings(setOf(ImportSection.MEMORY))
                         val currentBundle = kaiJsonToMemBundle(currentJson, nowIso)
                         val remoteBundle = MemBundle(PamManifest("remote", nowIso, 1, ""), episodes)
-                        
+
                         val merged = mergeBundles(currentBundle, remoteBundle, nowIso)
                         val newJson = memBundleToKaiJson(merged, currentJson)
-                        
+
                         importResult = onImportSettings(newJson.encodeToByteArray(), setOf(ImportSection.MEMORY), true)
                     } catch (_: Exception) {
                         importResult = ImportResult.Failure
@@ -181,7 +181,7 @@ internal fun ExportImportSection(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(12.dp))
-    
+
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
             onClick = {
