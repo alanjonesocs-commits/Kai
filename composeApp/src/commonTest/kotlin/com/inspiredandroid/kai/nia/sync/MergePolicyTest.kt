@@ -5,6 +5,7 @@ import com.inspiredandroid.kai.nia.memory.PamEpisode
 import com.inspiredandroid.kai.nia.memory.PamManifest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MergePolicyTest {
@@ -79,19 +80,45 @@ class MergePolicyTest {
     }
 
     @Test
-    fun deletionStaysEvenIfOtherSideEditedLater() {
-        val local = bundle(ep("1", updatedAt = "2026-10-23T12:00:00Z", content = "edited"))
+    fun laterEditBeatsEarlierDelete() {
+        val local = bundle(ep("1", updatedAt = "2026-10-23T12:00:00Z", content = "brought back"))
         val remote = bundle(ep("1", deletedAt = "2026-10-23T11:00:00Z"))
         val result = merged(local, remote).episodes.single()
-        assertEquals("2026-10-23T11:00:00Z", result.deletedAt)
-        assertEquals("edited", result.content)
+        assertNull(result.deletedAt)
+        assertEquals("brought back", result.content)
     }
 
     @Test
-    fun earliestDeletionTimeIsKept() {
+    fun laterDeleteBeatsEarlierEdit() {
+        val local = bundle(ep("1", updatedAt = "2026-10-23T10:30:00Z", content = "edited"))
+        val remote = bundle(ep("1", deletedAt = "2026-10-23T11:00:00Z"))
+        assertEquals("2026-10-23T11:00:00Z", merged(local, remote).episodes.single().deletedAt)
+    }
+
+    @Test
+    fun deleteWinsOnExactTie() {
+        val local = bundle(ep("1", updatedAt = "2026-10-23T11:00:00Z"))
+        val remote = bundle(ep("1", deletedAt = "2026-10-23T11:00:00Z"))
+        assertEquals("2026-10-23T11:00:00Z", merged(local, remote).episodes.single().deletedAt)
+        assertEquals("2026-10-23T11:00:00Z", merged(remote, local).episodes.single().deletedAt)
+    }
+
+    @Test
+    fun laterDeletionTimeIsKeptWhenBothDeleted() {
         val local = bundle(ep("1", deletedAt = "2026-10-23T11:00:00Z"))
         val remote = bundle(ep("1", deletedAt = "2026-10-23T09:00:00Z"))
-        assertEquals("2026-10-23T09:00:00Z", merged(local, remote).episodes.single().deletedAt)
+        assertEquals("2026-10-23T11:00:00Z", merged(local, remote).episodes.single().deletedAt)
+    }
+
+    @Test
+    fun groupingDoesNotMatter() {
+        val a = bundle(ep("1", updatedAt = "2026-10-23T10:00:00Z", content = "a"), ep("2"))
+        val b = bundle(ep("1", deletedAt = "2026-10-23T11:00:00Z"), ep("3", content = "b3"))
+        val c = bundle(
+            ep("1", updatedAt = "2026-10-23T12:00:00Z", content = "c"),
+            ep("2", deletedAt = "2026-10-23T13:00:00Z"),
+        )
+        assertEquals(merged(merged(a, b), c).episodes, merged(a, merged(b, c)).episodes)
     }
 
     @Test
