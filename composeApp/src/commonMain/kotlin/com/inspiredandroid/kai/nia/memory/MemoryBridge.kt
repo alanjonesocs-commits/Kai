@@ -61,3 +61,4 @@ fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> = bundle.episodes
     .filter { it.deletedAt == null }
     .mapNotNull { runCatching { it.toMemoryEntry() }.getOrNull() }
     .sortedWith(compareBy({ it.createdAt }, { it.key }))
+// Nia memory bridge
