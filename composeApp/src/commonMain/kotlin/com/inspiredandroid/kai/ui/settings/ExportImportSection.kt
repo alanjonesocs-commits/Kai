@@ -36,6 +36,11 @@ import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.data.ImportSection
 import com.inspiredandroid.kai.data.SharedJson
 import com.inspiredandroid.kai.data.detectImportSections
+import com.inspiredandroid.kai.nia.memory.MemBundle
+import com.inspiredandroid.kai.nia.memory.PamManifest
+import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
+import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
+import com.inspiredandroid.kai.nia.sync.mergeBundles
 import com.inspiredandroid.kai.saveFileToDevice
 import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.handCursor
@@ -70,12 +75,6 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonObject
 import org.jetbrains.compose.resources.stringResource
-// NIA IMPORTS
-import com.inspiredandroid.kai.nia.memory.MemBundle
-import com.inspiredandroid.kai.nia.memory.PamManifest
-import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
-import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
-import com.inspiredandroid.kai.nia.sync.mergeBundles
 
 @Composable
 internal fun ExportImportSection(
@@ -111,7 +110,6 @@ internal fun ExportImportSection(
         null
     }
 
-    // NIA FILE PICKER
     val niaFilePickerLauncher = if (!isPreview) {
         rememberFilePickerLauncher(
             type = FileKitType.File(extensions = listOf("mem")),
@@ -205,7 +203,6 @@ internal fun ExportImportSection(
         }
     }
 
-    // NIA PORTABLE MEMORY SECTION
     Spacer(Modifier.height(24.dp))
     Text(
         text = "NIA Portable Memory",
@@ -460,13 +457,4 @@ private fun ExportPreviewDialog(
 private fun sectionDisplayName(section: ImportSection): String = when (section) {
     ImportSection.SERVICES -> stringResource(Res.string.settings_import_section_services)
     ImportSection.SOUL -> stringResource(Res.string.settings_import_section_soul)
-    ImportSection.MEMORY -> stringResource(Res.string.settings_import_section_memory)
-    ImportSection.SCHEDULING -> stringResource(Res.string.settings_import_section_scheduling)
-    ImportSection.HEARTBEAT -> stringResource(Res.string.settings_import_section_heartbeat)
-    ImportSection.EMAIL -> stringResource(Res.string.settings_import_section_email)
-    ImportSection.SMS -> stringResource(Res.string.settings_sms)
-    ImportSection.SPLINTERLANDS -> "Splinterlands"
-    ImportSection.TOOLS -> stringResource(Res.string.settings_import_section_tools)
-    ImportSection.MCP -> stringResource(Res.string.settings_import_section_mcp)
-    ImportSection.CONVERSATIONS -> stringResource(Res.string.settings_import_section_conversations)
-}
+    ImportSectio
