@@ -17,8 +17,7 @@ class MemoryBridgeTest {
         updatedAt: Long = createdAt,
     ) = MemoryEntry(key = key, content = content, createdAt = createdAt, updatedAt = updatedAt)
 
-    private fun episode(key: String, timestamp: String = "2026-10-23T10:00:00Z", category: String? = null, deletedAt: String? = null) =
-        PamEpisode(id = "mem_$key", timestamp = timestamp, key = key, content = "c", category = category, deletedAt = deletedAt)
+    private fun episode(key: String, timestamp: String = "2026-10-23T10:00:00Z", category: String? = null, deletedAt: String? = null) = PamEpisode(id = "mem_$key", timestamp = timestamp, key = key, content = "c", category = category, deletedAt = deletedAt)
 
     private fun bundle(vararg eps: PamEpisode) = MemBundle(PamManifest("b", now, 1, ""), eps.toList())
 
