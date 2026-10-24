@@ -459,4 +459,14 @@ private fun ExportPreviewDialog(
 @Composable
 private fun sectionDisplayName(section: ImportSection): String = when (section) {
     ImportSection.SERVICES -> stringResource(Res.string.settings_import_section_services)
-    ImportSection.SOUL ->
+    ImportSection.SOUL -> stringResource(Res.string.settings_import_section_soul)
+    ImportSection.MEMORY -> stringResource(Res.string.settings_import_section_memory)
+    ImportSection.SCHEDULING -> stringResource(Res.string.settings_import_section_scheduling)
+    ImportSection.HEARTBEAT -> stringResource(Res.string.settings_import_section_heartbeat)
+    ImportSection.EMAIL -> stringResource(Res.string.settings_import_section_email)
+    ImportSection.SMS -> stringResource(Res.string.settings_sms)
+    ImportSection.SPLINTERLANDS -> "Splinterlands"
+    ImportSection.TOOLS -> stringResource(Res.string.settings_import_section_tools)
+    ImportSection.MCP -> stringResource(Res.string.settings_import_section_mcp)
+    ImportSection.CONVERSATIONS -> stringResource(Res.string.settings_import_section_conversations)
+}
