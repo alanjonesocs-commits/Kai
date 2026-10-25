@@ -7,11 +7,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 private const val ID_PREFIX = "mem_"
-private val kaiJson = Json {
-    ignoreUnknownKeys = true
-    prettyPrint = true
-    explicitNulls = false
-}
+private val kaiJson = Json { ignoreUnknownKeys = true; prettyPrint = true; explicitNulls = false }
 private val knownKaiKeys = setOf("key", "content", "category", "hitCount", "source")
 
 @OptIn(ExperimentalTime::class)
@@ -64,11 +60,13 @@ fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> = bundle.episodes
     .mapNotNull { runCatching { it.toMemoryEntry() }.getOrNull() }
     .sortedWith(compareBy({ it.createdAt }, { it.key }))
 
-// --- JSON BRIDGES (Required by ExportImportSection.kt) ---
+// --- JSON BRIDGES ---
 
 fun kaiJsonToMemBundle(kaiSettingsJson: String, nowIso: String): MemBundle {
     val root = runCatching { kaiJson.parseToJsonElement(kaiSettingsJson) }.getOrNull()?.jsonObject ?: JsonObject(emptyMap())
-    val memArray = (root["memory"] as? JsonArray) ?: (root["memories"] as? JsonArray) ?: JsonArray(emptyList())
+    
+    // FIX: Kai uses "agent_memories"
+    val memArray = (root["agent_memories"] as? JsonArray) ?: (root["memory"] as? JsonArray) ?: (root["memories"] as? JsonArray) ?: JsonArray(emptyList())
 
     val episodes = memArray.mapNotNull { el ->
         val obj = el as? JsonObject ?: return@mapNotNull null
@@ -84,14 +82,8 @@ fun kaiJsonToMemBundle(kaiSettingsJson: String, nowIso: String): MemBundle {
         val originalTimestamp = obj["timestamp"]?.jsonPrimitive?.contentOrNull ?: nowIso
 
         PamEpisode(
-            id = "mem_$key",
-            timestamp = originalTimestamp,
-            key = key,
-            content = content,
-            category = category,
-            hitCount = hitCount,
-            source = source,
-            extra = extra,
+            id = "mem_$key", timestamp = originalTimestamp, key = key, content = content,
+            category = category, hitCount = hitCount, source = source, extra = extra
         )
     }
     val manifest = PamManifest(bundleId = "nia_$nowIso", createdAt = nowIso, schemaVersion = 1, checksum = "")
@@ -101,19 +93,17 @@ fun kaiJsonToMemBundle(kaiSettingsJson: String, nowIso: String): MemBundle {
 fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
     val root = runCatching { kaiJson.parseToJsonElement(originalKaiJson) }.getOrNull()?.jsonObject ?: JsonObject(emptyMap())
     val live = bundle.episodes.filter { it.deletedAt == null }
-    val newMemory = JsonArray(
-        live.map { ep ->
-            buildJsonObject {
-                put("key", ep.key)
-                put("content", ep.content)
-                ep.category?.let { put("category", it) }
-                put("hitCount", ep.hitCount)
-                ep.source?.let { put("source", it) }
-                ep.extra.forEach { (k, v) -> put(k, v) }
-            }
-        },
-    )
-    val memoryKey = if (root.containsKey("memories") && !root.containsKey("memory")) "memories" else "memory"
-    val newRoot = JsonObject(root.toMutableMap().apply { put(memoryKey, newMemory) })
+    val newMemory = JsonArray(live.map { ep ->
+        buildJsonObject {
+            put("key", ep.key); put("content", ep.content)
+            ep.category?.let { put("category", it) }
+            put("hitCount", ep.hitCount)
+            ep.source?.let { put("source", it) }
+            ep.extra.forEach { (k, v) -> put(k, v) }
+        }
+    })
+    
+    // FIX: Write back to "agent_memories"
+    val newRoot = JsonObject(root.toMutableMap().apply { put("agent_memories", newMemory) })
     return kaiJson.encodeToString(JsonObject.serializer(), newRoot)
 }
