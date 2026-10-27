@@ -42,6 +42,7 @@ import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
 import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
 import com.inspiredandroid.kai.nia.sync.mergeBundles
 import com.inspiredandroid.kai.saveFileToDevice
+import kotlin.time.Clock
 import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.handCursor
 import io.github.vinceglb.filekit.dialogs.FileKitType
@@ -120,7 +121,7 @@ internal fun ExportImportSection(
                         val bytes = file.readBytes()
                         val text = bytes.decodeToString()
                         val episodes = MemBundle.parseEpisodes(text)
-                        val nowIso = "2026-10-24T21:40:00Z"
+                        val nowIso = Clock.System.now().toString()
 
                         val currentJson = onExportSettings(setOf(ImportSection.MEMORY))
                         val currentBundle = kaiJsonToMemBundle(currentJson, nowIso)
@@ -221,7 +222,7 @@ internal fun ExportImportSection(
         OutlinedButton(
             onClick = {
                 importResult = null
-                val nowIso = "2026-10-24T21:40:00Z"
+                val nowIso = Clock.System.now().toString()
                 val kaiJson = onExportSettings(setOf(ImportSection.MEMORY))
                 val bundle = kaiJsonToMemBundle(kaiJson, nowIso)
                 val memString = bundle.toJsonLines()
