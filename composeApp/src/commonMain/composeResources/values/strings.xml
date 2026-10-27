@@ -447,7 +447,7 @@
     <string name="model_free_badge">Free</string>
     <string name="model_filter_free">Free</string>
     <string name="model_free_empty">No free-tier models for this service.</string>
-    <string name="kai_build_open">Open Kai Build</string>
+    <string name="kai_build_open">Open Nia</string>
     <string name="kai_build_title">Kai Build</string>
     <string name="kai_build_exit_content_description">Exit Kai Build</string>
     <string name="kai_build_back_content_description">Back to projects</string>
