@@ -110,6 +110,12 @@ class MainActivity : ComponentActivity() {
         autoStartDaemon()
     }
 
+    override fun onStop() {
+        super.onStop()
+        val repository: DataRepository = get()
+        NiaAutoSave.save(applicationContext, repository)
+    }
+
     private fun autoStartDaemon() {
         val daemonController: DaemonController = get()
         if (daemonController is AndroidDaemonController && daemonController.shouldAutoStart()) {
