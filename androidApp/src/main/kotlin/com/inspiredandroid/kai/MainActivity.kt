@@ -1,13 +1,6 @@
 package com.inspiredandroid.kai
 
 import android.content.Context
-import java.io.File
-import com.inspiredandroid.kai.nia.memory.MemBundle
-import com.inspiredandroid.kai.nia.memory.PamManifest
-import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
-import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
-
-
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +26,10 @@ import androidx.navigation.compose.rememberNavController
 import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.DataRepository
 import com.inspiredandroid.kai.data.ThemeMode
+import com.inspiredandroid.kai.nia.memory.MemBundle
+import com.inspiredandroid.kai.nia.memory.PamManifest
+import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
+import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
 import io.github.vinceglb.filekit.FileKit
@@ -41,6 +38,7 @@ import nl.marc_apps.tts.TextToSpeechEngine
 import nl.marc_apps.tts.TextToSpeechFactory
 import nl.marc_apps.tts.TextToSpeechInstance
 import org.koin.android.ext.android.get
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
