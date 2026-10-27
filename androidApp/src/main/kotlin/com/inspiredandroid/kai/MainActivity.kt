@@ -1,5 +1,13 @@
 package com.inspiredandroid.kai
 
+import android.content.Context
+import java.io.File
+import com.inspiredandroid.kai.nia.memory.MemBundle
+import com.inspiredandroid.kai.nia.memory.PamManifest
+import com.inspiredandroid.kai.nia.memory.kaiJsonToMemBundle
+import com.inspiredandroid.kai.nia.memory.memBundleToKaiJson
+
+
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -185,4 +193,39 @@ private fun rememberSystemTextToSpeechOrNull(): TextToSpeechInstance? {
 @Composable
 fun AppAndroidPreview() {
     App(navController = rememberNavController())
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            val prefs = getSharedPreferences("kai_settings", Context.MODE_PRIVATE)
+            val memoryJson = prefs.getString("agent_memories", prefs.getString("memory", "{}")) ?: "{}"
+            val nowIso = java.time.Instant.now().toString()
+            val bundle = kaiJsonToMemBundle(memoryJson, nowIso)
+            val memString = bundle.toJsonLines()
+            val dir = getExternalFilesDir(null)
+            if (dir != null) {
+                val file = File(dir, "nia-memory.mem")
+                file.writeText(memString)
+            }
+        } catch (e: Exception) {}
+    }
+
+    override fun onStart() {
+        super.onStart()
+        try {
+            val dir = getExternalFilesDir(null)
+            if (dir != null) {
+                val file = File(dir, "nia-memory.mem")
+                if (file.exists()) {
+                    val text = file.readText()
+                    val episodes = MemBundle.parseEpisodes(text)
+                    val bundle = MemBundle(PamManifest("load", java.time.Instant.now().toString(), 1, ""), episodes)
+                    val prefs = getSharedPreferences("kai_settings", Context.MODE_PRIVATE)
+                    val currentJson = prefs.getString("agent_memories", "{}") ?: "{}"
+                    val newJson = memBundleToKaiJson(bundle, currentJson)
+                    prefs.edit().putString("agent_memories", newJson).apply()
+                }
+            }
+        } catch (e: Exception) {}
+    }
 }
