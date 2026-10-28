@@ -12,6 +12,12 @@ plugins {
     alias(libs.plugins.sqldelight)
 }
 
+compose {
+    resources {
+        packageOfResClass = "kai.composeapp.generated.resources"
+    }
+}
+
 sqldelight {
     databases {
         create("KaiDatabase") {
