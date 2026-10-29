@@ -1,0 +1,38 @@
+
+name: NIA Read-only Diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show current revision
+        run: |
+          git log -5 --oneline
+          echo "Current branch: $GITHUB_REF_NAME"
+
+      - name: Locate NIA memory source files
+        run: |
+          find . -type f \( \
+            -name 'ExportImportSection.kt' -o \
+            -name 'MemoryBridge.kt' -o \
+            -name 'MergePolicy.kt' -o \
+            -name 'PamModels.kt' -o \
+            -name '*SettingsViewModel.kt' \
+          \) -not -path './.git/*' -print
+
+      - name: Find memory export references
+        run: |
+          grep -RInE \
+            'onExportSettings|ImportSection\.MEMORY|PamEpisode|MemBundle|ExportImportSection' \
+            composeApp androidApp \
+            --include='*.kt' 2>/dev/null | head -200 || true
+            
