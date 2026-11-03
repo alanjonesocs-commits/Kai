@@ -418,12 +418,12 @@ class FakeDataRepository : DataRepository {
 
     override fun getMemories(): List<MemoryEntry> = memories.toList()
 
-    override suspend fun deleteMemory(key: String) {
-        memories.removeAll { it.key == key }
+    override suspend fun deleteMemory(id: String) {
+        memories.removeAll { it.id == id }
     }
 
-    override suspend fun updateMemoryContent(key: String, content: String) {
-        val index = memories.indexOfFirst { it.key == key }
+    override suspend fun updateMemoryContent(id: String, content: String) {
+        val index = memories.indexOfFirst { it.id == id }
         if (index >= 0) {
             memories[index] = memories[index].copy(content = content)
         }

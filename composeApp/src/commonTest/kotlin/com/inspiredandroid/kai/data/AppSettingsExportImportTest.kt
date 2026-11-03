@@ -70,6 +70,30 @@ class AppSettingsExportImportTest {
     }
 
     @Test
+    fun `export and import preserve conflicting claim identity and provenance`() {
+        val settings = createAppSettings()
+        val claim = MemoryEntry(
+            key = "residence",
+            content = "London",
+            createdAt = 1_700_000_000_123,
+            updatedAt = 1_700_000_000_123,
+            id = "residence:claim-2",
+            source = "conversation",
+            resolutionStatus = MemoryAssessment.NEEDS_VERIFICATION,
+            sourceConversationId = "conversation-2",
+            provenance = listOf(MemoryProvenance("conversation", "conversation-2", 1_700_000_000_123)),
+        )
+        settings.setMemoriesJson(SharedJson.encodeToString(listOf(claim)))
+
+        val exported = settings.exportToJson(toolIds)
+        val target = createAppSettings()
+        target.importFromJson(exported, toolIds)
+        val restored = SharedJson.decodeFromString<List<MemoryEntry>>(target.getMemoriesJson()).single()
+
+        assertEquals(claim, restored)
+    }
+
+    @Test
     fun `export and import round-trips scheduling settings`() {
         val appSettings = createAppSettings()
         appSettings.setSchedulingEnabled(false)
@@ -377,6 +401,80 @@ class AppSettingsExportImportTest {
         assertFalse(target.isMemoryEnabled()) // memory section still imported
         assertTrue(target.getMemoriesJson().contains("m1"))
         assertTrue(target.getMcpServersJson().contains("srv1"))
+    }
+
+    @Test
+    fun `invalid memory array preserves existing memories and memory setting`() {
+        val settings = MapSettings()
+        val target = AppSettings(settings)
+        target.setMemoryEnabled(false)
+        target.setMemoriesJson(
+            """[{"key":"residence","content":"Manchester","createdAt":1,"updatedAt":1}]""",
+        )
+        val previousMemories = target.getMemoriesJson()
+        val json = JsonObject(
+            mapOf(
+                "memory_enabled" to JsonPrimitive(true),
+                "agent_memories" to Json.parseToJsonElement("""{"not":"an array"}"""),
+            ),
+        )
+
+        val errors = target.importFromJson(json, toolIds, setOf(ImportSection.MEMORY))
+
+        assertEquals(1, errors)
+        assertFalse(target.isMemoryEnabled())
+        assertEquals(previousMemories, target.getMemoriesJson())
+        assertTrue(settings.keys.none { it.startsWith("${AppSettings.KEY_CORRUPT_JSON_BACKUP_PREFIX}MemoryStore.import.") })
+    }
+
+    @Test
+    fun `invalid memory entry rejects the whole memory import`() {
+        val settings = MapSettings()
+        val target = AppSettings(settings)
+        target.setMemoriesJson(
+            """[{"key":"important","content":"keep this","createdAt":1,"updatedAt":1}]""",
+        )
+        val previousMemories = target.getMemoriesJson()
+        val json = JsonObject(
+            mapOf(
+                "memory_enabled" to JsonPrimitive(false),
+                "agent_memories" to Json.parseToJsonElement(
+                    """[{"key":"valid","content":"candidate"},{"content":"missing key"}]""",
+                ),
+            ),
+        )
+
+        val errors = target.importFromJson(json, toolIds, setOf(ImportSection.MEMORY))
+
+        assertEquals(1, errors)
+        assertTrue(target.isMemoryEnabled())
+        assertEquals(previousMemories, target.getMemoriesJson())
+    }
+
+    @Test
+    fun `valid memory replacement keeps a backup of previous memory data`() {
+        val settings = MapSettings()
+        val target = AppSettings(settings)
+        val previousMemories = """[{"key":"important","content":"keep this","createdAt":1,"updatedAt":1}]"""
+        target.setMemoriesJson(previousMemories)
+        val json = JsonObject(
+            mapOf(
+                "memory_enabled" to JsonPrimitive(true),
+                "agent_memories" to Json.parseToJsonElement(
+                    """[{"key":"imported","content":"validated","createdAt":2,"updatedAt":2}]""",
+                ),
+            ),
+        )
+
+        val errors = target.importFromJson(json, toolIds, setOf(ImportSection.MEMORY))
+
+        assertEquals(0, errors)
+        assertTrue(target.getMemoriesJson().contains("imported"))
+        val backupKeys = settings.keys.filter {
+            it.startsWith("${AppSettings.KEY_CORRUPT_JSON_BACKUP_PREFIX}MemoryStore.import.")
+        }
+        assertEquals(1, backupKeys.size)
+        assertEquals(previousMemories, settings.getString(backupKeys.single(), ""))
     }
 
     @Test

@@ -194,7 +194,7 @@ fun SettingsScreenContent(
 
     val pendingDeletion = uiState.pendingDeletion
     val filteredMemories = remember(uiState.memories, pendingDeletion) {
-        if (pendingDeletion is PendingDeletion.Memory) uiState.memories.filter { it.key != pendingDeletion.key }.toImmutableList() else uiState.memories
+        if (pendingDeletion is PendingDeletion.Memory) uiState.memories.filter { it.id != pendingDeletion.id }.toImmutableList() else uiState.memories
     }
     val filteredTasks = remember(uiState.scheduledTasks, pendingDeletion) {
         if (pendingDeletion is PendingDeletion.Task) uiState.scheduledTasks.filter { it.id != pendingDeletion.id }.toImmutableList() else uiState.scheduledTasks

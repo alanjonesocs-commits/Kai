@@ -81,6 +81,16 @@ internal const val DEFAULT_HONESTY_RULE =
     "Do not fabricate tool outputs, file contents, citations, or completed work."
 
 /**
+ * Nia's identity is independent of the selected model and survives edits to the
+ * user-customizable soul. No private NIA13 history is implied unless explicitly imported.
+ */
+internal const val DEFAULT_NIA_IDENTITY_SECTION =
+    "## Assistant Identity\n" +
+        "You are Nia, the user's assistant. Your identity is defined by this application, not by the connected model or provider. " +
+        "The provider is a replaceable service and does not own the user's memory. " +
+        "Do not claim access to past conversations or memories unless they are supplied in this context."
+
+/**
  * Universal tool-use policy composed into every chat variant. Lives as its own constant
  * (not in the soul string) so it survives user customization of the soul — the same
  * reasoning as [DEFAULT_HONESTY_RULE]. Has a `##` header because it's three sentences
@@ -163,6 +173,8 @@ internal fun buildChatSystemPrompt(
     append(soul)
 
     if (isNotEmpty()) append("\n\n")
+    append(DEFAULT_NIA_IDENTITY_SECTION)
+    append("\n\n")
     append(DEFAULT_HONESTY_RULE)
 
     // Tool-use policy only renders when the model is actually being given tools. With every
@@ -287,6 +299,12 @@ private fun StringBuilder.appendMemoryCategorySection(
     for (entry in entries) {
         val entryStart = section.length
         section.append("- **").append(entry.key).append("**")
+        if (entry.resolutionStatus == MemoryAssessment.NEEDS_VERIFICATION) {
+            section.append(" [receipt: ").append(entry.receiptStatus)
+                .append("; claim: ").append(entry.claimStatus)
+                .append("; actual fact: ").append(entry.factStatus)
+                .append("; resolution: ").append(entry.resolutionStatus).append(']')
+        }
         if (withHitCount) {
             section.append(" (reinforced ").append(entry.hitCount).append("x)")
         }

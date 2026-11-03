@@ -1939,12 +1939,12 @@ class RemoteDataRepository(
 
     override fun getMemories(): List<MemoryEntry> = memoryStore.getAllMemories()
 
-    override suspend fun deleteMemory(key: String) {
-        memoryStore.forget(key)
+    override suspend fun deleteMemory(id: String) {
+        memoryStore.forgetById(id)
     }
 
-    override suspend fun updateMemoryContent(key: String, content: String) {
-        memoryStore.updateContent(key, content)
+    override suspend fun updateMemoryContent(id: String, content: String) {
+        memoryStore.updateContentById(id, content)
     }
 
     override fun isSchedulingEnabled(): Boolean = appSettings.isSchedulingEnabled()

@@ -20,6 +20,12 @@
     <string name="settings_custom_model_label">Custom model</string>
     <string name="settings_custom_model_hint">Enter a model id supported by your server, even if it is not listed above.</string>
     <string name="toggle_speech_output_content_description">Toggle speech output</string>
+    <string name="voice_input_content_description">Start voice input</string>
+    <string name="voice_input_stop_content_description">Stop voice input</string>
+    <string name="voice_input_permission_denied">Microphone permission is required for voice input.</string>
+    <string name="voice_input_unavailable">Speech recognition is unavailable on this device.</string>
+    <string name="voice_input_failed">Could not recognize speech. Try again.</string>
+    <string name="voice_input_no_speech">No speech was recognized.</string>
     <string name="settings_content_description">Settings</string>
     <string name="bot_message_speech_content_description">Speech</string>
     <string name="bot_message_copy_content_description">Copy</string>

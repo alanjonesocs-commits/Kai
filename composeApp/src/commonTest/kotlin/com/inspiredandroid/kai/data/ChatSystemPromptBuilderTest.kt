@@ -233,6 +233,7 @@ class ChatSystemPromptBuilderTest {
             schedulingEnabled = false,
         )
         val expected = "You're a personal assistant.\n\n" +
+            DEFAULT_NIA_IDENTITY_SECTION + "\n\n" +
             DEFAULT_HONESTY_RULE + "\n\n" +
             DEFAULT_ACTING_SECTION + "\n\n" +
             "## Context\n" +
@@ -242,6 +243,34 @@ class ChatSystemPromptBuilderTest {
             "- Model: test-model\n" +
             "- Provider: Test Provider\n"
         assertEquals(expected, out)
+    }
+
+    @Test
+    fun `Nia identity survives empty or customized soul text`() {
+        val emptySoul = build(SystemPromptVariant.CHAT_LOCAL, soul = "")
+        val customizedSoul = build(SystemPromptVariant.CHAT_REMOTE, soul = "Use a concise writing style.")
+
+        assertTrue(emptySoul.startsWith(DEFAULT_NIA_IDENTITY_SECTION))
+        assertTrue("Use a concise writing style." in customizedSoul)
+        assertTrue(DEFAULT_NIA_IDENTITY_SECTION in customizedSoul)
+        assertTrue("Do not claim access to past conversations or memories" in customizedSoul)
+    }
+
+    @Test
+    fun `unresolved memory conflicts display evidence classifications`() {
+        val unresolved = memory("residence", "London").copy(
+            receiptStatus = MemoryAssessment.CONFIRMED,
+            claimStatus = MemoryAssessment.REPORTED,
+            factStatus = MemoryAssessment.UNKNOWN,
+            resolutionStatus = MemoryAssessment.NEEDS_VERIFICATION,
+        )
+        val out = build(SystemPromptVariant.CHAT_REMOTE, generalMemories = listOf(unresolved))
+
+        assertTrue("receipt: CONFIRMED" in out)
+        assertTrue("claim: REPORTED" in out)
+        assertTrue("actual fact: UNKNOWN" in out)
+        assertTrue("resolution: NEEDS_VERIFICATION" in out)
+        assertTrue("- **residence**" in out && "London" in out)
     }
 
     @Test
@@ -600,6 +629,7 @@ class ChatSystemPromptBuilderTest {
             uiMode = ChatPromptUiMode.DYNAMIC_UI,
         )
         val expected = "You are Kai, a helpful assistant.\n\n" +
+            DEFAULT_NIA_IDENTITY_SECTION + "\n\n" +
             DEFAULT_HONESTY_RULE + "\n\n" +
             DEFAULT_TOOL_USE_SECTION + "\n\n" +
             DEFAULT_ACTING_SECTION + "\n\n" +

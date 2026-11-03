@@ -30,6 +30,8 @@ The process of graduating a well-reinforced memory into the permanent soul/syste
 ## Storage
 
 - Memories are serialized as JSON in app settings
+- Each claim has a stable id, source/provenance fields, and separate receipt, claim, fact, and resolution classifications
+- Competing claims remain independently editable/deletable by id and are marked `NEEDS_VERIFICATION`; recording a claim does not make its contents a confirmed fact
 - Thread-safe access via mutex for concurrent operations
 - If the stored JSON can no longer be decoded (e.g. after a schema change), the raw blob is backed up under a separate settings key before the next write, so the only copy is never overwritten. The backup is not part of settings export
 - Memory feature is enabled by default
@@ -38,7 +40,7 @@ The process of graduating a well-reinforced memory into the permanent soul/syste
 ## Memory Lifecycle
 
 1. AI stores a memory using `memory_store` (general) or `memory_learn` (categorized)
-2. If a memory with the same key exists, it is updated
+2. An exact duplicate is ignored. A different value for the same key is retained as a separate claim; neither claim is silently overwritten
 3. On subsequent conversations, AI can reinforce memories that prove useful via `memory_reinforce`
 4. AI can remove outdated memories via `memory_forget`
 5. Memories with a hit count of 5 or more (a new memory starts at 1) become promotion candidates, surfaced during heartbeat checks
@@ -85,7 +87,7 @@ The memories section lives in Settings → Agent and contains:
 | `memory_reinforce` | Increment a memory's hit count |
 | `promote_learning` | Graduate a memory into the soul/system prompt and remove it from the store. Rides the scheduling switch (not the memory switch) and is callable from any conversation, not only heartbeat runs |
 
-`memory_store`, `memory_forget`, and `memory_reinforce` are also exposed to on-device models; `memory_learn` and `promote_learning` are not.
+`memory_store`, `memory_forget`, and `memory_reinforce` are also exposed to on-device models; `memory_learn` and `promote_learning` are not. A key with competing claims is ambiguous to key-only forget/reinforce calls; those operations do not silently select or remove one.
 
 ## Key Files
 

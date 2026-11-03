@@ -3,10 +3,16 @@ package com.inspiredandroid.kai.tools
 import java.io.File
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 private const val MAX_OUTPUT_LENGTH = 30_000
+
+// Pipe readers block, so keep them off the common pool where they can starve process monitors.
+private val processWorkers = Executors.newCachedThreadPool { runnable ->
+    Thread(runnable, "kai-process-manager").apply { isDaemon = true }
+}
 
 class ProcessManager {
 
@@ -58,7 +64,7 @@ class ProcessManager {
         sessions[sessionId] = session
 
         // Drain stdout/stderr in background threads with bounded buffers
-        CompletableFuture.runAsync {
+        CompletableFuture.runAsync({
             process.inputStream.bufferedReader().forEachLine { line ->
                 synchronized(session.stdoutBuffer) {
                     if (session.stdoutBuffer.length < MAX_OUTPUT_LENGTH) {
@@ -66,8 +72,8 @@ class ProcessManager {
                     }
                 }
             }
-        }
-        CompletableFuture.runAsync {
+        }, processWorkers)
+        CompletableFuture.runAsync({
             process.errorStream.bufferedReader().forEachLine { line ->
                 synchronized(session.stderrBuffer) {
                     if (session.stderrBuffer.length < MAX_OUTPUT_LENGTH) {
@@ -75,10 +81,10 @@ class ProcessManager {
                     }
                 }
             }
-        }
+        }, processWorkers)
 
         // Monitor for completion/timeout
-        CompletableFuture.runAsync {
+        CompletableFuture.runAsync({
             val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
             if (!completed) {
                 process.destroyForcibly()
@@ -88,7 +94,7 @@ class ProcessManager {
                 session.exitCode = process.exitValue()
             }
             session.finished = true
-        }
+        }, processWorkers)
 
         return mapOf(
             "success" to true,

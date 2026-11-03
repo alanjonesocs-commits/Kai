@@ -152,7 +152,7 @@ enum class McpConnectionStatus {
 }
 
 sealed interface PendingDeletion {
-    data class Memory(val key: String) : PendingDeletion
+    data class Memory(val id: String) : PendingDeletion
     data class Task(val id: String) : PendingDeletion
     data class EmailAccount(val id: String) : PendingDeletion
     data class Service(val instanceId: String) : PendingDeletion

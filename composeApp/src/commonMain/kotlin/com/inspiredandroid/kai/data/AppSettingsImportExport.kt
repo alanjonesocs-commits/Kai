@@ -174,6 +174,22 @@ fun AppSettings.importFromJson(
 ): Int {
     var errors = 0
 
+    val importedMemory = if (ImportSection.MEMORY in sections) {
+        try {
+            val enabled = json["memory_enabled"]?.let { value ->
+                value.jsonPrimitive.content.toBooleanStrictOrNull()
+                    ?: error("memory_enabled must be a boolean")
+            } ?: true
+            val memories = json["agent_memories"]?.let(::sanitizeMemories) ?: ""
+            ImportedMemorySection(enabled, memories)
+        } catch (_: Exception) {
+            errors++
+            null
+        }
+    } else {
+        null
+    }
+
     val oldInstances = try {
         getConfiguredServiceInstances()
     } catch (_: Exception) {
@@ -234,16 +250,23 @@ fun AppSettings.importFromJson(
     }
 
     if (ImportSection.MEMORY in sections) {
+        if (importedMemory != null) {
+            try {
+                if (getMemoriesJson() != importedMemory.memoriesJson) backupMemoriesBeforeImport()
+                setMemoriesJson(importedMemory.memoriesJson)
+                setMemoryEnabled(importedMemory.enabled)
+            } catch (_: Exception) {
+                errors++
+            }
+        }
+    } else if (replace) {
         try {
-            setMemoryEnabled(json["memory_enabled"]?.jsonPrimitive?.content?.toBoolean() ?: true)
-            val memoriesElement = json["agent_memories"]
-            setMemoriesJson(if (memoriesElement != null) sanitizeMemories(memoriesElement) else "")
+            if (getMemoriesJson().isNotBlank()) backupMemoriesBeforeImport()
+            setMemoriesJson("")
+            setMemoryEnabled(true)
         } catch (_: Exception) {
             errors++
         }
-    } else if (replace) {
-        setMemoryEnabled(true)
-        setMemoriesJson("")
     }
 
     if (ImportSection.SCHEDULING in sections) {
@@ -370,6 +393,23 @@ fun AppSettings.importFromJson(
     return errors
 }
 
+private data class ImportedMemorySection(
+    val enabled: Boolean,
+    val memoriesJson: String,
+)
+
+private fun AppSettings.backupMemoriesBeforeImport() {
+    val raw = getMemoriesJson()
+    val baseKey = "${AppSettings.KEY_CORRUPT_JSON_BACKUP_PREFIX}MemoryStore.import.${Clock.System.now().toEpochMilliseconds()}"
+    var backupKey = baseKey
+    var suffix = 1
+    while (settings.getStringOrNull(backupKey) != null) {
+        backupKey = "$baseKey.$suffix"
+        suffix++
+    }
+    settings.putString(backupKey, raw)
+}
+
 private fun sanitizeScheduledTasks(element: JsonElement): String {
     val array = try {
         element.jsonArray
@@ -401,20 +441,18 @@ private fun sanitizeScheduledTasks(element: JsonElement): String {
 }
 
 private fun sanitizeMemories(element: JsonElement): String {
-    val array = try {
-        element.jsonArray
-    } catch (_: Exception) {
-        return "[]"
-    }
+    val array = element as? JsonArray ?: error("agent_memories must be an array")
     val now = Clock.System.now().toEpochMilliseconds()
-    val memories = array.mapNotNull { item ->
+    val memories = array.mapIndexed { index, item ->
         try {
             SharedJson.decodeFromString<MemoryEntry>(item.toString())
         } catch (_: Exception) {
             try {
-                val obj = item.jsonObject
+                val obj = item as? JsonObject ?: error("memory entry must be an object")
+                val key = obj["key"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                    ?: error("memory entry key is required")
                 MemoryEntry(
-                    key = obj["key"]?.jsonPrimitive?.content ?: Uuid.random().toString(),
+                    key = key,
                     content = obj["content"]?.jsonPrimitive?.content ?: "",
                     createdAt = obj["createdAt"]?.jsonPrimitive?.content?.toLongOrNull() ?: now,
                     updatedAt = obj["updatedAt"]?.jsonPrimitive?.content?.toLongOrNull() ?: now,
@@ -427,14 +465,26 @@ private fun sanitizeMemories(element: JsonElement): String {
                     } ?: MemoryCategory.GENERAL,
                     hitCount = obj["hitCount"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1,
                     source = obj["source"]?.jsonPrimitive?.content,
+                    id = obj["id"]?.jsonPrimitive?.content ?: key,
+                    receiptStatus = parseMemoryAssessment(obj["receiptStatus"]?.jsonPrimitive?.content, MemoryAssessment.CONFIRMED),
+                    claimStatus = parseMemoryAssessment(obj["claimStatus"]?.jsonPrimitive?.content, MemoryAssessment.REPORTED),
+                    factStatus = parseMemoryAssessment(obj["factStatus"]?.jsonPrimitive?.content, MemoryAssessment.UNKNOWN),
+                    resolutionStatus = parseMemoryAssessment(obj["resolutionStatus"]?.jsonPrimitive?.content, MemoryAssessment.UNKNOWN),
+                    sourceConversationId = obj["sourceConversationId"]?.jsonPrimitive?.content,
+                    provenance = obj["provenance"]?.let { provenance ->
+                        SharedJson.decodeFromString<List<MemoryProvenance>>(provenance.toString())
+                    }.orEmpty(),
                 )
-            } catch (_: Exception) {
-                null
+            } catch (recoveryError: Exception) {
+                throw IllegalArgumentException("Invalid memory entry at index $index", recoveryError)
             }
         }
     }
     return SharedJson.encodeToString(memories)
 }
+
+private fun parseMemoryAssessment(value: String?, fallback: MemoryAssessment): MemoryAssessment =
+    value?.let { raw -> MemoryAssessment.entries.firstOrNull { it.name == raw } } ?: fallback
 
 private fun sanitizeConversations(element: JsonElement): List<Conversation> {
     val array = try {

@@ -508,18 +508,18 @@ class SettingsViewModel(
         _state.update { it.copy(isMemoryEnabled = enabled) }
     }
 
-    private fun onDeleteMemory(key: String) {
+    private fun onDeleteMemory(id: String) {
         commitPendingDeletion()
-        _state.update { it.copy(pendingDeletion = PendingDeletion.Memory(key)) }
+        _state.update { it.copy(pendingDeletion = PendingDeletion.Memory(id)) }
         pendingDeleteJob = viewModelScope.launch(backgroundDispatcher) {
             delay(4.seconds)
-            executeDeletion(PendingDeletion.Memory(key))
+            executeDeletion(PendingDeletion.Memory(id))
         }
     }
 
-    private fun onUpdateMemory(key: String, content: String) {
+    private fun onUpdateMemory(id: String, content: String) {
         viewModelScope.launch(backgroundDispatcher) {
-            dataRepository.updateMemoryContent(key, content)
+            dataRepository.updateMemoryContent(id, content)
             _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
         }
     }
@@ -1035,7 +1035,7 @@ class SettingsViewModel(
     private suspend fun executeDeletion(deletion: PendingDeletion) {
         when (deletion) {
             is PendingDeletion.Memory -> {
-                dataRepository.deleteMemory(deletion.key)
+                dataRepository.deleteMemory(deletion.id)
                 _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
             }
 

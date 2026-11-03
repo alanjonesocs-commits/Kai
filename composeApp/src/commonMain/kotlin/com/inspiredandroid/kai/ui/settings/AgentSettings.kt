@@ -323,7 +323,7 @@ private fun MemoryList(
                 SettingsListItem(
                     title = memory.key,
                     subtitle = memory.content,
-                    onDelete = { onDeleteMemory(memory.key) },
+                    onDelete = { onDeleteMemory(memory.id) },
                     deleteContentDescription = stringResource(Res.string.settings_memories_delete),
                     subtitleMaxLines = 3,
                     onClick = { editingMemory = memory },
@@ -355,7 +355,7 @@ private fun MemoryList(
             memory = memory,
             onDismiss = { editingMemory = null },
             onSave = { newContent ->
-                onUpdateMemory(memory.key, newContent)
+                onUpdateMemory(memory.id, newContent)
                 editingMemory = null
             },
         )
@@ -390,7 +390,7 @@ private fun AllMemoriesSheet(
                 SettingsListItem(
                     title = memory.key,
                     subtitle = memory.content,
-                    onDelete = { onDeleteMemory(memory.key) },
+                    onDelete = { onDeleteMemory(memory.id) },
                     deleteContentDescription = deleteContentDescription,
                     subtitleMaxLines = 3,
                     onClick = { onEditMemory(memory) },
@@ -408,7 +408,7 @@ private fun EditMemorySheet(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var content by remember(memory.key) { mutableStateOf(memory.content) }
+    var content by remember(memory.id) { mutableStateOf(memory.content) }
     val hasChanges = content != memory.content && content.isNotBlank()
 
     ModalBottomSheet(
@@ -432,6 +432,26 @@ private fun EditMemorySheet(
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground,
             )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Receipt: ${memory.receiptStatus} · claim: ${memory.claimStatus} · fact: ${memory.factStatus} · resolution: ${memory.resolutionStatus}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            memory.source?.let { source ->
+                Text(
+                    text = "Source: $source",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            memory.sourceConversationId?.let { conversationId ->
+                Text(
+                    text = "Conversation: $conversationId",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             KaiOutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),

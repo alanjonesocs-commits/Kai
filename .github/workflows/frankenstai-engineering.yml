@@ -1,0 +1,166 @@
+name: FrankenstAI Engineering
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engineering:
+    if: github.ref == 'refs/heads/frankenstai/three-hour-engineering'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Verify mission branch
+        run: test "$GITHUB_REF_NAME" = "frankenstai/three-hour-engineering"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK 37 and native build tools
+        run: |
+          sdkmanager --install \
+            "platforms;android-37" \
+            "build-tools;36.0.0" \
+            "ndk;29.0.14206865"
+
+      - name: Prepare reports directory
+        run: mkdir -p reports/logs
+
+      - name: Run desktop tests
+        id: desktop-tests
+        continue-on-error: true
+        run: |
+          ./gradlew :composeApp:desktopTest --no-daemon --stacktrace > reports/logs/desktop-tests.log 2>&1
+          result=$?
+          cat reports/logs/desktop-tests.log
+          exit "$result"
+
+      - name: Run FOSS Android unit tests
+        id: foss-tests
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:testFossDebugUnitTest --no-daemon --stacktrace > reports/logs/foss-tests.log 2>&1
+          result=$?
+          cat reports/logs/foss-tests.log
+          exit "$result"
+
+      - name: Run Play Store Android unit tests
+        id: play-tests
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:testPlayStoreDebugUnitTest --no-daemon --stacktrace > reports/logs/play-tests.log 2>&1
+          result=$?
+          cat reports/logs/play-tests.log
+          exit "$result"
+
+      - name: Run FOSS lint
+        id: foss-lint
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:lintFossDebug --no-daemon --stacktrace > reports/logs/foss-lint.log 2>&1
+          result=$?
+          cat reports/logs/foss-lint.log
+          exit "$result"
+
+      - name: Run Play Store lint
+        id: play-lint
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:lintPlayStoreDebug --no-daemon --stacktrace > reports/logs/play-lint.log 2>&1
+          result=$?
+          cat reports/logs/play-lint.log
+          exit "$result"
+
+      - name: Build FOSS debug APK
+        id: foss-build
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:assembleFossDebug --no-daemon --stacktrace > reports/logs/foss-build.log 2>&1
+          result=$?
+          cat reports/logs/foss-build.log
+          exit "$result"
+
+      - name: Build Play Store debug APK
+        id: play-build
+        continue-on-error: true
+        run: |
+          ./gradlew :androidApp:assemblePlayStoreDebug --no-daemon --stacktrace > reports/logs/play-build.log 2>&1
+          result=$?
+          cat reports/logs/play-build.log
+          exit "$result"
+
+      - name: Verify APKs and create checksums
+        id: verify-apks
+        if: always()
+        continue-on-error: true
+        run: |
+          set -e
+          mkdir -p reports
+          foss_apk="androidApp/build/outputs/apk/foss/debug/androidApp-foss-debug.apk"
+          play_apk="androidApp/build/outputs/apk/playStore/debug/androidApp-playStore-debug.apk"
+          test -s "$foss_apk"
+          test -s "$play_apk"
+          sha256sum "$foss_apk" "$play_apk" | tee reports/apk-sha256.txt
+
+      - name: Write mission engineering report
+        if: always()
+        run: |
+          {
+            echo "# FrankenstAI Engineering Run"
+            echo
+            echo "- Branch: \`$GITHUB_REF_NAME\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Desktop tests: ${{ steps.desktop-tests.outcome }}"
+            echo "- FOSS Android unit tests: ${{ steps.foss-tests.outcome }}"
+            echo "- Play Store Android unit tests: ${{ steps.play-tests.outcome }}"
+            echo "- FOSS lint: ${{ steps.foss-lint.outcome }}"
+            echo "- Play Store lint: ${{ steps.play-lint.outcome }}"
+            echo "- FOSS APK build: ${{ steps.foss-build.outcome }}"
+            echo "- Play Store APK build: ${{ steps.play-build.outcome }}"
+            echo "- APK verification: ${{ steps.verify-apks.outcome }}"
+          } > reports/mission-engineering-report.md
+
+      - name: Upload APKs, test/lint reports, logs, checksums, and mission report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frankenstai-engineering-${{ github.run_number }}
+          path: |
+            androidApp/build/outputs/apk/**/*.apk
+            androidApp/build/reports/**
+            composeApp/build/reports/tests/**
+            reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve failed status for any required check
+        if: always()
+        env:
+          DESKTOP_TESTS: ${{ steps.desktop-tests.outcome }}
+          FOSS_TESTS: ${{ steps.foss-tests.outcome }}
+          PLAY_TESTS: ${{ steps.play-tests.outcome }}
+          FOSS_LINT: ${{ steps.foss-lint.outcome }}
+          PLAY_LINT: ${{ steps.play-lint.outcome }}
+          FOSS_BUILD: ${{ steps.foss-build.outcome }}
+          PLAY_BUILD: ${{ steps.play-build.outcome }}
+          APK_VERIFICATION: ${{ steps.verify-apks.outcome }}
+        run: |
+          for result in "$DESKTOP_TESTS" "$FOSS_TESTS" "$PLAY_TESTS" "$FOSS_LINT" "$PLAY_LINT" "$FOSS_BUILD" "$PLAY_BUILD" "$APK_VERIFICATION"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A required engineering check did not succeed"
+              exit 1
+            fi
+          done

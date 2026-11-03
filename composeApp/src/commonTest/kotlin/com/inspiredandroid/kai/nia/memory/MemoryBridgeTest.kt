@@ -3,10 +3,13 @@ package com.inspiredandroid.kai.nia.memory
 import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
 import com.inspiredandroid.kai.nia.sync.mergeBundles
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
+@OptIn(ExperimentalSerializationApi::class)
 class MemoryBridgeTest {
     private val now = "2026-10-24T09:00:00Z"
 
@@ -24,6 +27,28 @@ class MemoryBridgeTest {
     @Test
     fun entryRoundTripsExactly() {
         val original = MemoryEntry("k", "text", 1_700_000_000_123, 1_700_000_500_456, MemoryCategory.PREFERENCE, 4, "chat")
+        assertEquals(original, original.toPamEpisode().toMemoryEntry())
+    }
+
+    @Test
+    fun conflictingClaimMetadataAndIdsRoundTrip() {
+        val original = MemoryEntry(
+            key = "residence",
+            content = "London",
+            createdAt = 1_700_000_000_123,
+            updatedAt = 1_700_000_500_456,
+            id = "residence:claim-2",
+            source = "conversation",
+            receiptStatus = com.inspiredandroid.kai.data.MemoryAssessment.CONFIRMED,
+            claimStatus = com.inspiredandroid.kai.data.MemoryAssessment.REPORTED,
+            factStatus = com.inspiredandroid.kai.data.MemoryAssessment.UNKNOWN,
+            resolutionStatus = com.inspiredandroid.kai.data.MemoryAssessment.NEEDS_VERIFICATION,
+            sourceConversationId = "conversation-2",
+            provenance = listOf(
+                com.inspiredandroid.kai.data.MemoryProvenance("chat", "conversation-2", 1_700_000_000_123),
+            ),
+        )
+
         assertEquals(original, original.toPamEpisode().toMemoryEntry())
     }
 
@@ -89,5 +114,45 @@ class MemoryBridgeTest {
     fun differentMemoriesStayDifferent() {
         val result = memoriesToBundle(listOf(entry("a", "one"), entry("b", "two")), now)
         assertNotEquals(result.episodes[0].content, result.episodes[1].content)
+    }
+
+    @Test
+    fun kaiSettingsBridgePreservesCreatedAndUpdatedTimestamps() {
+        val settingsJson =
+            """{"agent_memories":[{"id":"claim-1","key":"residence","content":"London","createdAt":1700000000123,"updatedAt":1700000900456}]}"""
+
+        val bundle = kaiJsonToMemBundle(settingsJson, now)
+        val episode = bundle.episodes.single()
+
+        assertEquals(millisToIso(1_700_000_000_123), episode.timestamp)
+        assertEquals(millisToIso(1_700_000_900_456), episode.updatedAt)
+        val imported = memBundleToKaiJson(bundle, """{"version":1}""")
+        val roundTripped = kaiJsonToMemBundle(imported, now).episodes.single()
+        assertEquals(episode.timestamp, roundTripped.timestamp)
+        assertEquals(episode.updatedAt, roundTripped.updatedAt)
+    }
+
+    @Test
+    fun malformedSettingsMemoryDoesNotBecomeAnEmptyBundle() {
+        assertFailsWith<IllegalArgumentException> {
+            kaiJsonToMemBundle("""{"agent_memories":[{"content":"missing key"}]}""", now)
+        }
+        assertFailsWith<kotlinx.serialization.json.JsonDecodingException> {
+            kaiJsonToMemBundle("""{"agent_memories":""", now)
+        }
+    }
+
+    @Test
+    fun memoryBundleImportRejectsDuplicateIdsAndInvalidTimestamps() {
+        val duplicateIdEpisodes = listOf(episode("same"), episode("same"))
+            .joinToString("\n") { kotlinx.serialization.json.Json.encodeToString(PamEpisode.serializer(), it) }
+        assertFailsWith<IllegalArgumentException> {
+            MemBundle.parseEpisodes(duplicateIdEpisodes)
+        }
+
+        val malformed = episode("bad", timestamp = "not a date")
+        assertFailsWith<IllegalArgumentException> {
+            MemBundle.parseEpisodes(kotlinx.serialization.json.Json.encodeToString(PamEpisode.serializer(), malformed))
+        }
     }
 }
