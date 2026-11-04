@@ -383,7 +383,7 @@ class SherpaSpikeActivity : Activity() {
                 var totalSamples = 0L
                 val playbackStart = SystemClock.elapsedRealtime()
 
-                BufferedInputStream(FileInputStream(inputWav)).use { input ->
+                java.io.DataInputStream(BufferedInputStream(FileInputStream(inputWav))).use { input ->
                     val header = ByteArray(44)
                     input.readFully(header)
                     val bytes = ByteArray(CHUNK_SAMPLES * 2)
