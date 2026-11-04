@@ -167,31 +167,31 @@ actual fun VoiceConversationControl(
                 }
             }
             val engine = NiaAndroidAudioEngine(
-                onPcmFrame = { samples, _ ->
+                onPcmFrame = { samples, capturedAtNanos ->
                     // Never wait for inference here. A full queue ends the session
                     // visibly rather than silently dropping speech frames.
                     capturedFrames.incrementAndGet()
                     val queueDepth = queuedFrames.incrementAndGet()
                     maxQueueDepth.updateAndGet { previous -> maxOf(previous, queueDepth) }
-                    if (pcmFrames.trySend(QueuedPcmFrame(samples, System.nanoTime())).isFailure) {
+                    if (pcmFrames.trySend(QueuedPcmFrame(samples, capturedAtNanos)).isFailure) {
                         queuedFrames.decrementAndGet()
                         if (recognitionFailureReported.compareAndSet(false, true)) {
-                        NiaDiagnostics.record(
-                            "ERROR",
-                            "voice.audio",
-                            "recognition_queue_overflow",
-                            "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
-                        )
-                        pcmFrames.close(
-                            IllegalStateException(
-                                "Speech recognition could not keep up with microphone audio. Please try again.",
-                            ),
-                        )
-                        scope.launch {
-                            withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
-                            latestOnError.value("Speech recognition could not keep up with microphone audio. Please try again.")
-                            latestOnActiveChange.value(false)
-                        }
+                            NiaDiagnostics.record(
+                                "ERROR",
+                                "voice.audio",
+                                "recognition_queue_overflow",
+                                "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
+                            )
+                            pcmFrames.close(
+                                IllegalStateException(
+                                    "Speech recognition could not keep up with microphone audio. Please try again.",
+                                ),
+                            )
+                            scope.launch {
+                                withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
+                                latestOnError.value("Speech recognition could not keep up with microphone audio. Please try again.")
+                                latestOnActiveChange.value(false)
+                            }
                         }
                     }
                 },
