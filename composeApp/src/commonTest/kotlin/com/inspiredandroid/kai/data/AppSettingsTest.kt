@@ -239,4 +239,15 @@ class AppSettingsTest {
         assertTrue(instances.any { it.serviceId == Service.OpenAI.id })
         assertTrue(instances.any { it.serviceId == Service.Gemini.id })
     }
+    
+    @Test
+    fun `raw memory getter distinguishes missing store from stored empty array`() {
+        val settings = MapSettings()
+        val appSettings = AppSettings(settings)
+
+        assertEquals(null, appSettings.getMemoriesJsonOrNull())
+
+        appSettings.setMemoriesJson("[]")
+        assertEquals("[]", appSettings.getMemoriesJsonOrNull())
+    }
 }

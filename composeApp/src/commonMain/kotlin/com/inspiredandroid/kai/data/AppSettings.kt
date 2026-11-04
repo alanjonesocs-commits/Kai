@@ -265,6 +265,9 @@ class AppSettings(internal val settings: Settings) {
     // Agent memories
     fun getMemoriesJson(): String = settings.getString(KEY_AGENT_MEMORIES, "[]")
 
+    /** Returns the stored memory JSON without inventing an empty default when the key is absent. */
+    fun getMemoriesJsonOrNull(): String? = settings.getStringOrNull(KEY_AGENT_MEMORIES)
+
     /**
      * Keeps a persisted JSON blob that no longer decodes (e.g. after a schema change without a
      * migration) under its own key, so the store's next write can't destroy the only copy.
