@@ -60,6 +60,52 @@ class MemoryBridgeTest {
     }
 
     @Test
+    fun legacyExportTimestampsAreRecoveredFromExtraWhenTopLevelIsExportTime() {
+        val exportTime = "2026-11-03T18:03:38.362695Z"
+        val legacy = PamEpisode(
+            id = "mem_legacy",
+            timestamp = exportTime,
+            key = "legacy",
+            content = "preserve original dates",
+            extra = mapOf(
+                "createdAt" to "1790000000000",
+                "updatedAt" to "1790000123456",
+            ),
+        )
+        val restored = bundleToMemories(
+            MemBundle(PamManifest("legacy-export", exportTime, 1, ""), listOf(legacy)),
+        ).single()
+        assertEquals(1_790_000_000_000L, restored.createdAt)
+        assertEquals(1_790_000_123_456L, restored.updatedAt)
+
+        val exportedKai = memBundleToKaiJson(
+            MemBundle(PamManifest("legacy-export", exportTime, 1, ""), listOf(legacy)),
+            """{"version":1}""",
+        )
+        val roundTripped = kaiJsonToMemBundle(exportedKai, exportTime).episodes.single().toMemoryEntry()
+        assertEquals(restored.createdAt, roundTripped.createdAt)
+        assertEquals(restored.updatedAt, roundTripped.updatedAt)
+    }
+
+    @Test
+    fun legacyTimestampMetadataDoesNotOverrideCanonicalTopLevelDatesForNewerBundles() {
+        val exportTime = "2026-11-03T18:03:38.362695Z"
+        val canonical = PamEpisode(
+            id = "mem_canonical",
+            timestamp = "2026-10-25T10:00:00Z",
+            updatedAt = "2026-10-26T10:00:00Z",
+            key = "canonical",
+            content = "top level is authoritative",
+            extra = mapOf("createdAt" to "1000", "updatedAt" to "2000"),
+        )
+        val restored = bundleToMemories(
+            MemBundle(PamManifest("new-export", exportTime, 1, ""), listOf(canonical)),
+        ).single()
+        assertEquals(isoToMillis(canonical.timestamp), restored.createdAt)
+        assertEquals(isoToMillis(canonical.updatedAt!!), restored.updatedAt)
+    }
+
+    @Test
     fun missingUpdatedAtFallsBackToCreated() {
         val result = episode("k").toMemoryEntry()
         assertEquals(result.createdAt, result.updatedAt)
@@ -77,9 +123,27 @@ class MemoryBridgeTest {
     }
 
     @Test
-    fun malformedEpisodeIsSkippedNotFatal() {
-        val result = bundleToMemories(bundle(episode("good"), episode("bad", timestamp = "not a date")))
-        assertEquals(listOf("good"), result.map { it.key })
+    fun malformedLiveEpisodeFailsTheWholeImportInsteadOfBeingSilentlyDropped() {
+        assertFailsWith<IllegalArgumentException> {
+            bundleToMemories(bundle(episode("good"), episode("bad", timestamp = "not a date")))
+        }
+    }
+
+    @Test
+    fun duplicateEpisodeIdsFailTheWholeImport() {
+        val duplicateA = episode("same")
+        val duplicateB = duplicateA.copy(content = "different payload")
+        assertFailsWith<IllegalArgumentException> {
+            bundleToMemories(bundle(duplicateA, duplicateB))
+        }
+    }
+
+    @Test
+    fun importingTheSameBundleTwiceDoesNotMutateMemoryRecords() {
+        val original = bundle(episode("stable"))
+        val first = bundleToMemories(original)
+        val second = bundleToMemories(original)
+        assertEquals(first, second)
     }
 
     @Test

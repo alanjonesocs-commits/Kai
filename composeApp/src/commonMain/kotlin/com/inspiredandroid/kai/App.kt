@@ -35,12 +35,14 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.svg.SvgDecoder
 import com.inspiredandroid.kai.data.AppSettings
+import com.inspiredandroid.kai.data.DataRepository
 import com.inspiredandroid.kai.data.ThemeMode
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.tools.SetupPermissionHandler
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.home.CommandCentreScreen
+import com.inspiredandroid.kai.ui.home.BrainDashboardScreen
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.ui.Theme
 import com.inspiredandroid.kai.ui.chat.ChatScreen
@@ -78,6 +80,10 @@ object CommandCentre
 @Serializable
 @SerialName("skills")
 object Skills
+
+@Serializable
+@SerialName("brain_monitor")
+object BrainMonitor
 
 @Serializable
 @SerialName("projects")
@@ -178,6 +184,7 @@ private fun AppContent(
         Theme(colorScheme = effectiveColorScheme) {
             FullScreenImageHost {
                 val chatViewModel: ChatViewModel = koinViewModel()
+                val dataRepository = koinInject<DataRepository>()
                 val showTabBar = currentPlatform !is Platform.Mobile
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val isHome = currentBackStackEntry?.destination?.route == "home"
@@ -234,6 +241,15 @@ private fun AppContent(
                             onOpenProjects = {
                                 navController.navigate(Projects) { launchSingleTop = true }
                             },
+                            onOpenBrainMonitor = {
+                                navController.navigate(BrainMonitor) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                    composable<BrainMonitor> {
+                        BrainDashboardScreen(
+                            repository = dataRepository,
+                            onBack = { navController.navigateUp() },
                         )
                     }
                     composable<Skills> {

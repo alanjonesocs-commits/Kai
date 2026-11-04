@@ -54,13 +54,36 @@ fun MemoryEntry.toPamEpisode(): PamEpisode = PamEpisode(
     provenance = provenance,
 )
 
-fun PamEpisode.toMemoryEntry(): MemoryEntry {
-    val created = isoToMillis(timestamp)
+private fun parseMemoryTimestamp(value: String): Long =
+    value.toLongOrNull() ?: isoToMillis(value)
+
+/**
+ * Converts a PAM episode into the app model.
+ *
+ * Older exports stored the original millisecond timestamps in extra.createdAt /
+ * extra.updatedAt while writing the bundle/export time into timestamp. Only use
+ * those legacy values when timestamp matches the bundle manifest creation time;
+ * otherwise the canonical top-level timestamps remain authoritative.
+ */
+fun PamEpisode.toMemoryEntry(legacyBundleCreatedAt: String? = null): MemoryEntry {
+    val legacyExportTimestamp = legacyBundleCreatedAt != null && timestamp == legacyBundleCreatedAt
+    val created = if (legacyExportTimestamp) {
+        extra["createdAt"]?.let(::parseMemoryTimestamp) ?: isoToMillis(timestamp)
+    } else {
+        isoToMillis(timestamp)
+    }
+    val updated = if (legacyExportTimestamp) {
+        extra["updatedAt"]?.let(::parseMemoryTimestamp)
+            ?: updatedAt?.let { isoToMillis(it) }
+            ?: created
+    } else {
+        updatedAt?.let { isoToMillis(it) } ?: created
+    }
     return MemoryEntry(
         key = key,
         content = content,
         createdAt = created,
-        updatedAt = updatedAt?.let { isoToMillis(it) } ?: created,
+        updatedAt = updated,
         category = MemoryCategory.entries.firstOrNull { it.name == category } ?: MemoryCategory.GENERAL,
         hitCount = hitCount,
         source = source,
@@ -89,10 +112,17 @@ fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBu
     return MemBundle(manifest, (live + tombstones).sortedBy { it.id })
 }
 
-fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> = bundle.episodes
-    .filter { it.deletedAt == null }
-    .mapNotNull { runCatching { it.toMemoryEntry() }.getOrNull() }
-    .sortedWith(compareBy({ it.createdAt }, { it.key }))
+fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> {
+    // A bundle is one import transaction: never silently discard malformed live records.
+    // Validate IDs across live records and tombstones before converting anything.
+    require(bundle.episodes.map { it.id }.distinct().size == bundle.episodes.size) {
+        "Memory bundle contains duplicate episode ids"
+    }
+    return bundle.episodes
+        .filter { it.deletedAt == null }
+        .map { it.toMemoryEntry(bundle.manifest.createdAt) }
+        .sortedWith(compareBy({ it.createdAt }, { it.key }))
+}
 
 // --- JSON BRIDGES ---
 
@@ -161,18 +191,20 @@ private fun readKaiTimestamp(element: JsonElement?, fallback: String): String {
 fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
     val root = kaiJson.parseToJsonElement(originalKaiJson).jsonObject
     val live = bundle.episodes.filter { it.deletedAt == null }
-    live.forEach { episode -> episode.toMemoryEntry() }
+    live.forEach { episode -> episode.toMemoryEntry(bundle.manifest.createdAt) }
     require(live.map { it.id }.distinct().size == live.size) {
         "Memory bundle contains duplicate episode ids"
     }
+    val restoredEntries = live.associateWith { it.toMemoryEntry(bundle.manifest.createdAt) }
     val newMemory = JsonArray(
         live.map { ep ->
+            val restored = checkNotNull(restoredEntries[ep])
             buildJsonObject {
                 put("key", ep.key)
                 put("id", ep.id.removePrefix(ID_PREFIX))
                 put("content", ep.content)
-                put("createdAt", isoToMillis(ep.timestamp))
-                put("updatedAt", isoToMillis(ep.updatedAt ?: ep.timestamp))
+                put("createdAt", restored.createdAt)
+                put("updatedAt", restored.updatedAt)
                 ep.category?.let { put("category", it) }
                 put("hitCount", ep.hitCount)
                 ep.source?.let { put("source", it) }
@@ -184,7 +216,9 @@ fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
                 if (ep.provenance.isNotEmpty()) {
                     put("provenance", kaiJson.encodeToJsonElement(ep.provenance))
                 }
-                ep.extra.forEach { (k, v) -> put(k, v) }
+                ep.extra
+                    .filterKeys { it != "createdAt" && it != "updatedAt" }
+                    .forEach { (k, v) -> put(k, v) }
             }
         },
     )
