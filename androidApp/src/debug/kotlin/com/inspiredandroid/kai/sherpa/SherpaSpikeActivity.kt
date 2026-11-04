@@ -80,6 +80,7 @@ class SherpaSpikeActivity : Activity() {
     private lateinit var recordButton: Button
     private var audioRecord: AudioRecord? = null
     @Volatile private var recording = false
+    @Volatile private var recordingFinalized = false
     private var recordingThread: Thread? = null
     private var wavFile: File? = null
     private var pcmBytesWritten = 0L
@@ -194,6 +195,7 @@ class SherpaSpikeActivity : Activity() {
         recordingRoot.mkdirs()
         val file = File(recordingRoot, "reference-${System.currentTimeMillis()}.wav")
         wavFile = file
+        recordingFinalized = false
         pcmBytesWritten = 0L
         val output = BufferedOutputStream(FileOutputStream(file))
         output.write(ByteArray(44))
@@ -240,6 +242,7 @@ class SherpaSpikeActivity : Activity() {
                 output.flush()
                 output.close()
                 writeWavHeader(file, pcmBytesWritten)
+                recordingFinalized = true
                 recording = false
                 runOnUiThread {
                     recordButton.text = "Record reference script"
