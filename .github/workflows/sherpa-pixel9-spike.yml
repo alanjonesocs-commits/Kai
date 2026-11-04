@@ -28,7 +28,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: platform-tools platforms;android-37 ndk;29.0.14206865
+          packages: platform-tools
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
 
       - name: Verify toolchain
         run: |
