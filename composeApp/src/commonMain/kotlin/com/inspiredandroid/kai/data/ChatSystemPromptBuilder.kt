@@ -169,6 +169,7 @@ internal fun buildChatSystemPrompt(
     runtime: ChatPromptRuntimeContext,
     uiMode: ChatPromptUiMode,
     activeSkill: SkillManifest? = null,
+    nia15LabMemoryContext: String? = null,
 ): String = buildString {
     append(soul)
 
@@ -215,6 +216,12 @@ internal fun buildChatSystemPrompt(
     remaining = appendMemoryCategorySection("User Preferences", preferenceMemories, withHitCount = false, remaining)
     remaining = appendMemoryCategorySection("Learnings", learningMemories, withHitCount = true, remaining)
     appendMemoryCategorySection("Known Issues & Resolutions", errorMemories, withHitCount = false, remaining)
+
+    if (!nia15LabMemoryContext.isNullOrBlank()) {
+        append("\\n\\n## NIA15 Synthetic Memory Lab — TEST DATA ONLY\\n")
+        append("The following records are fictional test data, not facts about the user. Preserve their evidence classifications. Do not save, edit, delete, or merge these records into canonical memory.\\n")
+        append(nia15LabMemoryContext.trim())
+    }
 
     // Automation guidance + Email Accounts + Scheduled Tasks stay remote-only — the
     // matching tools aren't in the local allowlist. The Automation guidance references
