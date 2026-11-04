@@ -164,3 +164,27 @@ function can assign replacement IDs to duplicate/blank IDs, derive legacy
 provenance, and reclassify records sharing a key. Until SettingsJsonList.get()
 is inspected, it is not safe to assert that DataRepository.getMemories() is
 side-effect-free. Android snapshot generation remains blocked on this check.
+
+
+## Android snapshot encoder added (not connected to repository)
+
+A pure Android-side encoder now exists at:
+composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/NiaMemorySnapshotBuilder.kt
+
+It accepts a caller-supplied List<MemoryEntry>, serializes all declared model
+fields with defaults and explicit nulls enabled, sorts JSON object keys for
+the records digest, computes SHA-256, and emits the versioned envelope.
+
+It rejects blank IDs/keys, duplicate IDs, negative timestamps and negative
+hit counts. It does not read DataRepository or AppSettings, access files,
+transfer a snapshot, or change canonical memory. It is not wired into the UI
+or any automatic process.
+
+The Android encoder and Python canonicalizer must be tested against shared
+synthetic fixtures before their hashes are considered interoperable. The
+current Kotlin model uses integer timestamps and hit counts; future model
+fields with floating-point values require a canonical-number compatibility
+review.
+
+The Android encoder has not yet been compiled or unit-tested in this
+environment.
