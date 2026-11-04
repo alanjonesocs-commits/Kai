@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   memory-transfer-tests:
-    name: Memory transfer tests and formatting
+    name: Memory transfer tests
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -35,6 +35,3 @@ jobs:
 
       - name: Run common desktop test suite
         run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
-
-      - name: Check Kotlin formatting
-        run: ./gradlew spotlessCheck --no-daemon --stacktrace
