@@ -85,6 +85,7 @@ actual fun VoiceConversationControl(
                 }
                 val handler = Handler(Looper.getMainLooper())
                 var disposed = false
+                var lastReportedError: Int? = null
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-GB")
@@ -114,11 +115,13 @@ actual fun VoiceConversationControl(
                                 return
                             }
                             if (error != SpeechRecognizer.ERROR_NO_MATCH &&
-                                error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                                error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT &&
+                                lastReportedError != error
                             ) {
                                 val message = "Speech recognition error ($error). Retrying."
                                 latestOnError.value(message)
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                lastReportedError = error
                             }
                             handler.removeCallbacks(restart)
                             handler.postDelayed(restart, if (
@@ -133,6 +136,7 @@ actual fun VoiceConversationControl(
                                 ?.firstOrNull()
                                 ?.trim()
                             if (!transcript.isNullOrEmpty()) {
+                                lastReportedError = null
                                 latestOnRecognized.value(transcript)
                             } else {
                                 handler.removeCallbacks(restart)
