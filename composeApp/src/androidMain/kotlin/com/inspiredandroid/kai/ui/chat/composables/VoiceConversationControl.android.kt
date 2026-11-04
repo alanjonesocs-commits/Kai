@@ -20,6 +20,7 @@ import com.inspiredandroid.kai.voice.NiaSherpaModelInstaller
 import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -74,6 +75,7 @@ actual fun VoiceConversationControl(
 
         var audioEngine: NiaAndroidAudioEngine? = null
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
+        var recognizerWorker: Job? = null
         try {
             // The first voice session downloads the pinned ~43 MB model into app-private
             // storage. Later sessions reuse the locally checked model files.
@@ -101,7 +103,7 @@ actual fun VoiceConversationControl(
             // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
             val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
-            val recognizerWorker = launch(Dispatchers.Default) {
+            recognizerWorker = launch(Dispatchers.Default) {
                 try {
                     for (samples in pcmFrames) {
                         recognizer.acceptPcm16(samples)
@@ -110,10 +112,12 @@ actual fun VoiceConversationControl(
                     throw cancelled
                 } catch (failure: Exception) {
                     if (recognitionFailureReported.compareAndSet(false, true)) {
-                        latestOnError.value(
-                            failure.message ?: "Local speech recognition failed.",
-                        )
-                        latestOnActiveChange.value(false)
+                        scope.launch {
+                            latestOnError.value(
+                                failure.message ?: "Local speech recognition failed.",
+                            )
+                            latestOnActiveChange.value(false)
+                        }
                     }
                 }
             }
@@ -148,9 +152,8 @@ actual fun VoiceConversationControl(
             withContext(Dispatchers.IO) {
                 runCatching { audioEngine?.close() }
             }
-            // Stop the worker before releasing the native recogniser it owns.
-            // Cancellation also prevents a slow decode from delaying session teardown.
-            // The worker is cancelled automatically with this LaunchedEffect.
+            // Stop and join the serial inference worker before releasing its native recogniser.
+            runCatching { recognizerWorker?.cancelAndJoin() }
             withContext(Dispatchers.IO) {
                 runCatching { streamingRecognizer?.close() }
             }
