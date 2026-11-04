@@ -28,7 +28,7 @@ The indexer supports:
 - duplicate-ID rejection without deduplicating claims sharing a key;
 - SQLite integrity checks;
 - versioned index generations and atomic CURRENT pointer replacement;
-- retention of prior generations for rollback;
+- retention of prior generations and a separate explicit rollback helper;
 - explicit handling of uncertain snapshot ordering;
 - FTS5 retrieval of original records.
 
@@ -40,6 +40,7 @@ From this directory:
     python3 nia_memory_indexer.py index synthetic-snapshot.json --root ./nia-index
     python3 nia_memory_indexer.py status --root ./nia-index
     python3 nia_memory_indexer.py search --root ./nia-index "green notebook"
+    python3 nia_index_rollback.py --root ./nia-index --generation PREVIOUS_GENERATION
 
 When a source generation counter is unavailable, a changed snapshot returns
 NEEDS_VERIFICATION rather than silently treating timestamps as authoritative.
