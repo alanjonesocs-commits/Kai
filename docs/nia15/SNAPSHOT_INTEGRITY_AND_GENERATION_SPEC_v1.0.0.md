@@ -200,3 +200,42 @@ Positive controls to retain:
 This specification does not authorise transfer of real memory, Pixel storage writes, automatic synchronisation, Debian write-back, or merging PR #8/#9. Implementation must be isolated on a child branch from the current PR #9 head. Any change to canonical storage, migration semantics, export scheduling, generation authority, signing/key management, or merge state requires separate approval.
 
 Schema compatibility must be explicit. Do not silently label an old records-only snapshot as envelope-verified. A future schema version may make envelope integrity mandatory; until then, legacy compatibility must be clearly marked and fail closed for activation where freshness or integrity scope is insufficient.
+
+
+## 13. Binding implementation decisions — contract lock 1.1.0
+
+**Decision status:** Approved for synthetic implementation on the forensic branch only. This section supersedes conflicting compatibility wording in Sections 3, 4, 6 and 12 above.
+
+### 13.1 Schema version
+
+The coordinated producer/consumer contract is **schema_version 1.1.0**. The JSON Schema file must be versioned as `nia-memory-snapshot-1.1.schema.json`. Schema 1.0.0 is legacy records-hash-only input and is not eligible to initialise or replace the trusted active index through the normal `index` command. No silent upgrade or automatic re-hashing of legacy snapshots is permitted.
+
+### 13.2 Mandatory envelope fields
+
+Schema 1.1.0 requires all existing envelope fields plus:
+- `hash_scope`: exactly `snapshot-envelope-v1`;
+- `envelope_hash`: exactly 64 lowercase hexadecimal characters.
+
+`source_generation` remains optional. Schema 1.1.0 does not imply that a generation authority exists. The producer MUST omit `source_generation` until an explicitly approved canonical monotonic generation authority is implemented. A generation value without a stable `generation_authority` identifier is invalid for ordering and MUST NOT be used to activate changed content.
+
+### 13.3 Numeric and parser interoperability
+
+To avoid Kotlin/Python disagreement, schema 1.1.0 canonical JSON accepts only integer JSON numbers. Any decimal/exponent-form number anywhere in the envelope, including an unknown future property, is rejected. Booleans remain distinct from integers. Implementations MUST reject duplicate object member names before converting JSON into map/object structures; if the selected parser cannot reliably detect duplicates, an explicit duplicate-key scan/parser layer is required before normal decoding.
+
+Object keys are ordered by Unicode code-point order; arrays retain order. Strings use JSON escaping and UTF-8 output with non-ASCII characters emitted directly. Canonical bytes are compact with no insignificant whitespace. Both digest calculations use these exact bytes.
+
+### 13.4 Provenance policy
+
+Every record MUST contain at least one provenance item for schema 1.1.0. Each provenance item must contain all three required properties. Non-null `source` and `conversationId` values must be non-blank strings; null remains permitted. `observedAt` must be a non-negative integer. Record-level `source` and `sourceConversationId` remain nullable but required properties.
+
+### 13.5 Activation policy
+
+For this implementation phase no trusted generation authority is present. Therefore, after the first valid schema 1.1.0 snapshot initialises an empty index, any different envelope hash MUST return `NEEDS_VERIFICATION` and MUST leave `CURRENT` unchanged. Timestamp, UUID, filename, delivery order and operator flags MUST NOT override this rule. The normal CLI MUST NOT expose an uncertain-order bypass. Exact envelope-hash equality is idempotent; same snapshot ID with a different envelope hash is rejected.
+
+### 13.6 Required metadata and test lock
+
+The active SQLite metadata MUST store `schema_version`, `snapshot_id`, `records_hash`, `envelope_hash`, `hash_scope`, `created_at_epoch_ms`, `record_count`, `source_system`, and nullable `source_generation` / `generation_authority` values. Audit and status output must not contain record content.
+
+The shared golden fixture is synthetic and must include Unicode, nested unknown object fields, arrays, escaped characters and integer boundary values. Kotlin and Python must assert the same records hash AND envelope hash. Tests must prove that altering any integrity-covered envelope metadata fails validation, and that a changed valid snapshot without generation leaves the active `CURRENT` pointer unchanged.
+
+This contract lock is not evidence of implementation or test completion. No device, real-memory or merge authorisation is implied.
