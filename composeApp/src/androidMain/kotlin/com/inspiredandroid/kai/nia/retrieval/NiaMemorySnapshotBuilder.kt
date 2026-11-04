@@ -62,7 +62,7 @@ internal object NiaMemorySnapshotBuilder {
             .encodeToByteArray()
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(canonicalBytes)
-            .joinToString("") { byte -> "%02x".format(byte) }
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 
         val envelope = buildJsonObject {
             put("format", FORMAT)
