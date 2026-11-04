@@ -75,6 +75,14 @@ object Settings
 @SerialName("command_centre")
 object CommandCentre
 
+@Serializable
+@SerialName("skills")
+object Skills
+
+@Serializable
+@SerialName("projects")
+object Projects
+
 @Composable
 fun App(
     navController: NavHostController,
@@ -220,6 +228,24 @@ private fun AppContent(
                             onOpenSettings = {
                                 navController.navigate(Settings) { launchSingleTop = true }
                             },
+                            onOpenSkills = {
+                                navController.navigate(Skills) { launchSingleTop = true }
+                            },
+                            onOpenProjects = {
+                                navController.navigate(Projects) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                    composable<Skills> {
+                        SettingsScreen(
+                            onNavigateBack = { navController.navigateUp() },
+                            initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Tools,
+                        )
+                    }
+                    composable<Projects> {
+                        SettingsScreen(
+                            onNavigateBack = { navController.navigateUp() },
+                            initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Sandbox,
                         )
                     }
                     composable<Home> {
