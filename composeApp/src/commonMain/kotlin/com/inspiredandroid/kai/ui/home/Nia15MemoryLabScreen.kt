@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -193,6 +194,7 @@ fun Nia15MemoryLabScreen(onBack: () -> Unit) {
     var memories by remember { mutableStateOf(initialLoad.getOrElse { emptyList() }) }
     var loadError by remember { mutableStateOf(initialLoad.exceptionOrNull()?.message) }
     var search by remember { mutableStateOf("") }
+    var retrievalEnabled by remember { mutableStateOf(appSettings.isNia15LabChatRetrievalEnabled()) }
 
     LaunchedEffect(rawAtStart) {
         if (rawAtStart == null && loadError == null) {
@@ -231,10 +233,30 @@ fun Nia15MemoryLabScreen(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            "This test area uses its own settings key. It does not read, change or feed Nia's live memories or assistant chat.",
+            "This test area uses its own settings key. It never reads or changes canonical memories. Chat retrieval is separately controlled below and uses approved fictional records only.",
             style = MaterialTheme.typography.bodyMedium,
         )
         Text("Saved test records: ${memories.size}", style = MaterialTheme.typography.titleMedium)
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Connect synthetic memories to chat", style = MaterialTheme.typography.titleSmall)
+                    Text("Only APPROVED fictional records are supplied to Nia's next chat prompt. Canonical memory storage is not changed.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(
+                    checked = retrievalEnabled,
+                    onCheckedChange = { enabled ->
+                        appSettings.setNia15LabChatRetrievalEnabled(enabled)
+                        retrievalEnabled = enabled
+                    },
+                    enabled = loadError == null,
+                )
+            }
+        }
 
         if (loadError != null) {
             Card {
