@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apk:
@@ -37,7 +37,7 @@ jobs:
           sdkmanager "build-tools;29.0.3"
 
       - name: Build APK
-        run: bash ./gradlew :androidApp:assembleFossDebug -x updateScreenshots -x updateScreenshots --stacktrace
+        run: bash ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --stacktrace
 
       - name: Print Debug Keystore SHA1
         run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
@@ -47,3 +47,4 @@ jobs:
         with:
           name: APK
           path: androidApp/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
