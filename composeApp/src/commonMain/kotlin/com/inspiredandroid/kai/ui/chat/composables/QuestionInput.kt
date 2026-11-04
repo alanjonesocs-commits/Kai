@@ -315,6 +315,10 @@ fun QuestionInput(
                         if (voiceConversationActive && speakingVoiceReply) {
                             androidx.compose.material3.IconButton(
                                 onClick = {
+                                    // Cancel any still-running provider generation as well as
+                                    // stopping local speech output. This is a manual interruption
+                                    // control; speech-triggered barge-in is a separate milestone.
+                                    cancel()
                                     voiceScope.launch {
                                         withContext(getBackgroundDispatcher()) {
                                             textToSpeech?.stop()
