@@ -35,7 +35,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,10 +59,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.Platform
+import com.inspiredandroid.kai.getBackgroundDispatcher
 import com.inspiredandroid.kai.currentPlatform
 import com.inspiredandroid.kai.data.ServiceEntry
 import com.inspiredandroid.kai.data.imageExtensions
 import com.inspiredandroid.kai.skills.SkillManifest
+import com.inspiredandroid.kai.ui.dynamicui.toSpeakableText
 import com.inspiredandroid.kai.ui.gradientBrush
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.outlineTextFieldColors
@@ -78,6 +82,10 @@ import kai.composeapp.generated.resources.ic_up
 import kai.composeapp.generated.resources.prompt_ask_question
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import nl.marc_apps.tts.TextToSpeechInstance
+import nl.marc_apps.tts.errors.TextToSpeechSynthesisInterruptedError
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -97,8 +105,60 @@ fun QuestionInput(
     availableServices: ImmutableList<ServiceEntry> = persistentListOf(),
     onSelectService: (String) -> Unit = {},
     installedSkills: ImmutableList<SkillManifest> = persistentListOf(),
+    voiceConversationAvailable: Boolean = false,
+    assistantReplyId: String? = null,
+    assistantReplyText: String? = null,
+    hasError: Boolean = false,
+    textToSpeech: TextToSpeechInstance? = null,
     modifier: Modifier = Modifier,
 ) {
+    var voiceConversationActive by remember { mutableStateOf(false) }
+    var awaitingVoiceReply by remember { mutableStateOf(false) }
+    var speakingVoiceReply by remember { mutableStateOf(false) }
+    var lastVoiceReplyId by remember { mutableStateOf(assistantReplyId) }
+    var wasVoiceConversationActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(voiceConversationActive) {
+        if (!voiceConversationActive && wasVoiceConversationActive) {
+            withContext(getBackgroundDispatcher()) { textToSpeech?.stop() }
+        }
+        wasVoiceConversationActive = voiceConversationActive
+    }
+
+    LaunchedEffect(
+        voiceConversationActive,
+        awaitingVoiceReply,
+        isLoading,
+        assistantReplyId,
+        assistantReplyText,
+        hasError,
+    ) {
+        if (!voiceConversationActive || !awaitingVoiceReply || isLoading) return@LaunchedEffect
+
+        if (assistantReplyId != null && assistantReplyId != lastVoiceReplyId && assistantReplyText != null) {
+            lastVoiceReplyId = assistantReplyId
+            try {
+                if (textToSpeech != null) {
+                    speakingVoiceReply = true
+                    withContext(getBackgroundDispatcher()) {
+                        textToSpeech.stop()
+                        textToSpeech.say(assistantReplyText.toSpeakableText())
+                    }
+                }
+            } catch (_: TextToSpeechSynthesisInterruptedError) {
+                // The user ended the voice conversation while Nia was speaking.
+            } catch (_: Exception) {
+                // A speech engine failure must not strand the conversation session.
+            } finally {
+                speakingVoiceReply = false
+                awaitingVoiceReply = false
+            }
+        } else if (hasError) {
+            delay(1200)
+            awaitingVoiceReply = false
+        }
+    }
+
     Column(modifier = modifier) {
         // Slash autocomplete: shown when the user is typing the first token and it starts
         // with `/`. Selecting an entry rewrites the first token to the canonical skill id
@@ -244,6 +304,32 @@ fun QuestionInput(
                     modifier = Modifier.padding(end = 7.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    if (voiceConversationAvailable) {
+                        VoiceConversationControl(
+                            active = voiceConversationActive,
+                            listeningEnabled = voiceConversationActive &&
+                                !awaitingVoiceReply &&
+                                !isLoading &&
+                                !speakingVoiceReply,
+                            onActiveChange = { active ->
+                                voiceConversationActive = active
+                                if (active) {
+                                    lastVoiceReplyId = assistantReplyId
+                                    awaitingVoiceReply = false
+                                } else {
+                                    awaitingVoiceReply = false
+                                    speakingVoiceReply = false
+                                }
+                            },
+                            onRecognized = { recognized ->
+                                if (recognized.isNotBlank() && !isLoading) {
+                                    awaitingVoiceReply = true
+                                    ask(recognized.trim())
+                                }
+                            },
+                            onError = { },
+                        )
+                    }
                     VoiceInputButton { recognized ->
                         val text = textState.text
                         val updated = text + (if (text.isBlank()) "" else " ") + recognized
