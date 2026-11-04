@@ -36,8 +36,8 @@ The indexer supports:
 
 From this directory:
 
-    python3 nia_memory_indexer.py validate synthetic-snapshot.json
-    python3 nia_memory_indexer.py index synthetic-snapshot.json --root ./nia-index
+    python3 nia_memory_indexer.py validate fixtures/synthetic-memory-snapshot.json
+    python3 nia_memory_indexer.py index fixtures/synthetic-memory-snapshot.json --root ./nia-index
     python3 nia_memory_indexer.py status --root ./nia-index
     python3 nia_memory_indexer.py search --root ./nia-index "green notebook"
     python3 nia_index_rollback.py --root ./nia-index --generation PREVIOUS_GENERATION
@@ -51,8 +51,9 @@ not wired to automatic synchronisation.
 
     python3 -m unittest -v
 
-The tests create fictional records in temporary directories. They do not
-access device memory or perform file transfer.
+The checked-in five-record fixture and generated test records are entirely
+fictional. Tests use temporary directories and do not access device memory or
+perform file transfer.
 
 ## Not yet implemented / requires source and device verification
 
