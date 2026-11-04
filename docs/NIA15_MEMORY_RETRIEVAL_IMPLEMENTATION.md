@@ -188,3 +188,13 @@ review.
 
 The Android encoder has not yet been compiled or unit-tested in this
 environment.
+
+
+## Debian Python availability observed in source
+
+LinuxDistro.DE BIAN (Debian 12) declares python3 in its basePackages list.
+LinuxSandboxManager.arePackagesInstalled() checks for both /usr/bin/python3
+and /usr/bin/ssh before reporting the optional package set as installed.
+This is source-level evidence that a fresh Debian install is intended to
+include Python 3; it is not proof that the Pixel 9's currently installed
+rootfs contains a working Python interpreter or SQLite FTS5.
