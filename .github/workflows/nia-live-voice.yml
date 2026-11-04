@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: nia-live-voice-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   voice-build:
     name: Desktop tests and Android build
