@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 FORMAT = "nia-memory-snapshot"
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 STATUSES = {"CONFIRMED", "REPORTED", "ASSUMED", "UNKNOWN", "NEEDS_VERIFICATION"}
 CATEGORIES = {"GENERAL", "LEARNING", "ERROR", "PREFERENCE"}
 REQUIRED_RECORD_FIELDS = {
@@ -45,6 +45,22 @@ def canonical_json(value: Any) -> bytes:
 
 def records_digest(records: list[dict[str, Any]]) -> str:
     return hashlib.sha256(canonical_json(records)).hexdigest()
+
+
+def envelope_digest(document: dict[str, Any]) -> str:
+    payload = {key: value for key, value in document.items() if key != "envelope_hash"}
+    return hashlib.sha256(canonical_json(payload)).hexdigest()
+
+
+def _reject_float_numbers(value: Any, path: str = "$") -> None:
+    if isinstance(value, float):
+        raise SnapshotError(f"non-integer JSON number is not supported at {path}")
+    if isinstance(value, dict):
+        for key, child in value.items():
+            _reject_float_numbers(child, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _reject_float_numbers(child, f"{path}[{index}]")
 
 
 def _is_int(value: Any) -> bool:
@@ -74,6 +90,8 @@ def validate_snapshot(document: Any) -> dict[str, Any]:
         errors.append("source.system is required")
     if document.get("hash_algorithm") != "SHA-256":
         errors.append("hash_algorithm must be SHA-256")
+    if document.get("hash_scope") != "snapshot-envelope-v1":
+        errors.append("hash_scope must be snapshot-envelope-v1")
     records = document.get("records")
     if not isinstance(records, list):
         errors.append("records must be an array")
@@ -123,17 +141,26 @@ def validate_snapshot(document: Any) -> dict[str, Any]:
                 if not isinstance(item, dict) or not REQUIRED_PROVENANCE_FIELDS.issubset(item):
                     errors.append(f"{pfx} missing required provenance fields")
                     continue
-                if item["source"] is not None and not isinstance(item["source"], str):
-                    errors.append(f"{pfx}.source must be string or null")
-                if item["conversationId"] is not None and not isinstance(item["conversationId"], str):
-                    errors.append(f"{pfx}.conversationId must be string or null")
+                if item["source"] is not None and (not isinstance(item["source"], str) or not item["source"].strip()):
+                    errors.append(f"{pfx}.source must be a non-blank string or null")
+                if item["conversationId"] is not None and (not isinstance(item["conversationId"], str) or not item["conversationId"].strip()):
+                    errors.append(f"{pfx}.conversationId must be a non-blank string or null")
                 if not _is_int(item["observedAt"]) or item["observedAt"] < 0:
                     errors.append(f"{pfx}.observedAt must be a non-negative integer")
+    try:
+        _reject_float_numbers(document)
+    except SnapshotError as exc:
+        errors.append(str(exc))
     expected_hash = document.get("records_hash")
     if not isinstance(expected_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
         errors.append("records_hash must be a lowercase SHA-256 hex digest")
     elif expected_hash != records_digest(records):
         errors.append("records_hash mismatch")
+    expected_envelope_hash = document.get("envelope_hash")
+    if not isinstance(expected_envelope_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_envelope_hash):
+        errors.append("envelope_hash must be a lowercase SHA-256 hex digest")
+    elif expected_envelope_hash != envelope_digest(document):
+        errors.append("envelope_hash mismatch")
     if errors:
         raise SnapshotError("; ".join(errors))
     return document
@@ -213,6 +240,8 @@ def _create_index(db_path: Path, document: dict[str, Any]) -> None:
             "schema_version": "1",
             "snapshot_id": document["snapshot_id"],
             "records_hash": document["records_hash"],
+            "envelope_hash": document["envelope_hash"],
+            "hash_scope": document["hash_scope"],
             "created_at_epoch_ms": str(document["created_at_epoch_ms"]),
             "record_count": str(document["record_count"]),
             "source_system": document["source"]["system"],
@@ -250,8 +279,6 @@ def _create_index(db_path: Path, document: dict[str, Any]) -> None:
 def index_snapshot(
     document: dict[str, Any],
     root: Path,
-    *,
-    accept_uncertain_order: bool = False,
 ) -> dict[str, Any]:
     """Build a new generation and atomically switch CURRENT only after verification."""
     validate_snapshot(document)
@@ -265,35 +292,32 @@ def index_snapshot(
             active_name, active = _read_current(root)
             incoming_id = document["snapshot_id"]
             incoming_hash = document["records_hash"]
+            incoming_envelope_hash = document["envelope_hash"]
             if active:
                 if active.get("snapshot_id") == incoming_id:
-                    if active.get("records_hash") == incoming_hash:
+                    if active.get("envelope_hash") == incoming_envelope_hash:
                         return {"decision": "ALREADY_INDEXED", "generation": active_name}
-                    raise SnapshotError("same snapshot_id supplied with a different records_hash")
-                if active.get("records_hash") == incoming_hash:
+                    raise SnapshotError("same snapshot_id supplied with a different envelope_hash")
+                if active.get("envelope_hash") == incoming_envelope_hash:
                     return {"decision": "IDENTICAL_CONTENT", "generation": active_name}
                 old_gen = active.get("source_generation", "")
                 new_gen = str(document.get("source_generation", ""))
-                if old_gen and new_gen:
-                    if not new_gen.isdigit() or not old_gen.isdigit():
-                        raise SnapshotError("source_generation values must be integers")
-                    if int(new_gen) <= int(old_gen):
-                        raise SnapshotError("incoming snapshot is not a newer source generation")
-                else:
-                    old_time = int(active.get("created_at_epoch_ms", "0"))
-                    new_time = int(document["created_at_epoch_ms"])
-                    if new_time < old_time and not accept_uncertain_order:
-                        return {
-                            "decision": "NEEDS_VERIFICATION",
-                            "reason": "incoming timestamp is older and no source generation is available",
-                            "generation": active_name,
-                        }
-                    if not accept_uncertain_order:
-                        return {
-                            "decision": "NEEDS_VERIFICATION",
-                            "reason": "content differs but no trustworthy source generation is available",
-                            "generation": active_name,
-                        }
+                if not old_gen or not new_gen:
+                    return {
+                        "decision": "NEEDS_VERIFICATION",
+                        "reason": "changed content has no trustworthy source generation",
+                        "generation": active_name,
+                    }
+                if active.get("source_system") != document["source"]["system"]:
+                    return {
+                        "decision": "NEEDS_VERIFICATION",
+                        "reason": "source generation authority differs",
+                        "generation": active_name,
+                    }
+                if not old_gen.isdigit() or not new_gen.isdigit():
+                    raise SnapshotError("source_generation values must be integers")
+                if int(new_gen) <= int(old_gen):
+                    raise SnapshotError("incoming snapshot is not a newer source generation")
 
             generation = _safe_generation_name(incoming_id, incoming_hash)
             final_dir = generations / generation
@@ -361,7 +385,6 @@ def main(argv: list[str] | None = None) -> int:
     index_cmd = sub.add_parser("index")
     index_cmd.add_argument("snapshot", type=Path)
     index_cmd.add_argument("--root", type=Path, required=True)
-    index_cmd.add_argument("--accept-uncertain-order", action="store_true")
     search_cmd = sub.add_parser("search")
     search_cmd.add_argument("--root", type=Path, required=True)
     search_cmd.add_argument("query")
@@ -371,10 +394,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "validate":
             doc = load_snapshot(args.snapshot)
-            print(json.dumps({"valid": True, "snapshot_id": doc["snapshot_id"], "record_count": doc["record_count"], "records_hash": doc["records_hash"]}, indent=2))
+            print(json.dumps({"valid": True, "snapshot_id": doc["snapshot_id"], "record_count": doc["record_count"], "records_hash": doc["records_hash"], "envelope_hash": doc["envelope_hash"]}, indent=2))
         elif args.command == "index":
             doc = load_snapshot(args.snapshot)
-            print(json.dumps(index_snapshot(doc, args.root, accept_uncertain_order=args.accept_uncertain_order), indent=2))
+            print(json.dumps(index_snapshot(doc, args.root), indent=2))
         elif args.command == "search":
             print(json.dumps(search_index(args.root, args.query), ensure_ascii=False, indent=2))
         elif args.command == "status":
