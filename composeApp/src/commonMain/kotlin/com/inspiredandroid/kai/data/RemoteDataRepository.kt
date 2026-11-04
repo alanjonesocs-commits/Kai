@@ -1826,7 +1826,7 @@ class RemoteDataRepository(
         val byCategory = memories.groupBy { it.category }
         // Experimental retrieval is opt-in and reads only the dedicated synthetic-lab key.
         // It never imports these records into MemoryStore or the canonical agent_memories key.
-        val nia15LabMemoryContext = if (memoryEnabled && appSettings.isNia15LabChatRetrievalEnabled()) {
+        val nia15LabMemoryContext = if (appSettings.isNia15LabChatRetrievalEnabled()) {
             val rawLabMemories = appSettings.getNia15LabMemoriesJsonOrNull()
             if (rawLabMemories == null) {
                 null
