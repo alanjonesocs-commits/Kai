@@ -380,6 +380,7 @@ class SherpaSpikeActivity : Activity() {
 
                 val segments = mutableListOf<String>()
                 var lastPartial = ""
+                var firstSpeechWallMs: Long? = null
                 var firstPartialMs: Long? = null
                 var lastSpeechWallMs: Long? = null
                 var endpointDelayMs: Long? = null
@@ -405,14 +406,19 @@ class SherpaSpikeActivity : Activity() {
                         }
                         val rms = sqrt(squareSum / sampleCount)
                         val chunkWallMs = SystemClock.elapsedRealtime()
-                        if (rms > 0.012) lastSpeechWallMs = chunkWallMs
+                        if (rms > 0.012) {
+                            if (firstSpeechWallMs == null) firstSpeechWallMs = chunkWallMs
+                            lastSpeechWallMs = chunkWallMs
+                        }
 
                         stream.acceptWaveform(samples, sampleRate = SAMPLE_RATE)
                         while (recognizer.isReady(stream)) recognizer.decode(stream)
 
                         val resultText = recognizer.getResult(stream).text.trim()
                         if (resultText.isNotBlank() && resultText != lastPartial) {
-                            if (firstPartialMs == null) firstPartialMs = chunkWallMs - playbackStart
+                            if (firstPartialMs == null) {
+                                firstPartialMs = chunkWallMs - (firstSpeechWallMs ?: playbackStart)
+                            }
                             lastPartial = resultText
                             appendStatus("Partial: $resultText")
                         }
@@ -457,7 +463,7 @@ class SherpaSpikeActivity : Activity() {
                     appendLine("Tokens SHA-256: ${sha256(tokens)}")
                     appendLine("Endpoint rule 2: 600 ms")
                     appendLine("Maximum utterance: 20 s")
-                    appendLine("First partial from playback start: ${firstPartialMs ?: "not observed"} ms")
+                    appendLine("First partial from first RMS-detected speech chunk: ${firstPartialMs ?: "not observed"} ms")
                     appendLine("Last endpoint delay from last RMS-detected speech chunk: ${endpointDelayMs ?: "not observed"} ms")
                     appendLine("Decode wall time: ${finishedAt - startedAt} ms")
                     appendLine("Battery: ${batteryBefore.first}% -> ${batteryAfter.first}%")
