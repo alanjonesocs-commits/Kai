@@ -19,6 +19,8 @@ on:
       - "tools/nia-memory-indexer/**"
       - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
       - "composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt"
+      - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt"
       - "composeApp/build.gradle.kts"
       - "gradle/**"
       - "gradlew"
