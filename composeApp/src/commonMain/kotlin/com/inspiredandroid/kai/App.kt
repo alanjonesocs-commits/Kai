@@ -40,6 +40,7 @@ import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.tools.SetupPermissionHandler
 import com.inspiredandroid.kai.ui.DarkColorScheme
+import com.inspiredandroid.kai.ui.home.CommandCentreScreen
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.ui.Theme
 import com.inspiredandroid.kai.ui.chat.ChatScreen
@@ -69,6 +70,10 @@ object Home
 @Serializable
 @SerialName("settings")
 object Settings
+
+@Serializable
+@SerialName("command_centre")
+object CommandCentre
 
 @Composable
 fun App(
@@ -204,9 +209,19 @@ private fun AppContent(
 
                 NavHost(
                     navController,
-                    startDestination = Home,
+                    startDestination = if (currentPlatform is Platform.Mobile) CommandCentre else Home,
                     modifier = Modifier.background(MaterialTheme.colorScheme.background),
                 ) {
+                    composable<CommandCentre> {
+                        CommandCentreScreen(
+                            onOpenChat = {
+                                navController.navigate(Home) { launchSingleTop = true }
+                            },
+                            onOpenSettings = {
+                                navController.navigate(Settings) { launchSingleTop = true }
+                            },
+                        )
+                    }
                     composable<Home> {
                         ChatScreen(
                             viewModel = chatViewModel,
