@@ -1,6 +1,13 @@
 name: NIA15 Memory Integrity Tests
 
 on:
+  push:
+    branches:
+      - fix/nia15-memory-import-integrity
+    paths:
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/**"
+      - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/nia/memory/**"
+      - ".github/workflows/nia15-memory-integrity.yml"
   pull_request:
     paths:
       - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/**"
