@@ -164,6 +164,7 @@ internal class NiaAndroidAudioEngine(
         require(playbackSampleRate in 8_000..48_000) { "Unsupported playback sample rate." }
         val generation = playbackGeneration.incrementAndGet()
         stopPlayerOnly()
+        if (samples.isEmpty() || playbackGeneration.get() != generation) return generation
 
         val minBuffer = AudioTrack.getMinBufferSize(
             playbackSampleRate,
@@ -171,6 +172,8 @@ internal class NiaAndroidAudioEngine(
             AudioFormat.ENCODING_PCM_16BIT,
         )
         check(minBuffer > 0) { "PCM playback is unavailable." }
+
+        // Bound native buffering independently of response length.
         val track = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -185,35 +188,42 @@ internal class NiaAndroidAudioEngine(
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                     .build(),
             )
-            .setBufferSizeInBytes(maxOf(minBuffer, samples.size * 2))
+            .setBufferSizeInBytes(maxOf(minBuffer, PLAYBACK_BUFFER_BYTES))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
-        synchronized(lock) { player = track }
-        check(track.state == AudioTrack.STATE_INITIALIZED) {
-            track.release()
-            "Could not initialise audio playback."
-        }
-        track.play()
-        var offset = 0
-        while (offset < samples.size && playbackGeneration.get() == generation) {
-            val written = track.write(
-                samples,
-                offset,
-                samples.size - offset,
-                AudioTrack.WRITE_BLOCKING,
-            )
-            if (written <= 0) break
-            offset += written
-        }
-        if (playbackGeneration.get() == generation) {
-            track.stop()
-        }
-        synchronized(lock) {
-            if (player === track) {
-                player = null
-                track.release()
+        var registered = false
+        try {
+            check(track.state == AudioTrack.STATE_INITIALIZED) {
+                "Could not initialise audio playback."
             }
+            synchronized(lock) {
+                if (playbackGeneration.get() == generation) {
+                    player = track
+                    registered = true
+                }
+            }
+            if (!registered) return generation
+
+            track.play()
+            var offset = 0
+            while (offset < samples.size && playbackGeneration.get() == generation) {
+                val count = minOf(PLAYBACK_WRITE_SAMPLES, samples.size - offset)
+                val written = track.write(samples, offset, count, AudioTrack.WRITE_BLOCKING)
+                if (written <= 0) break
+                offset += written
+            }
+            if (playbackGeneration.get() == generation &&
+                track.playState == AudioTrack.PLAYSTATE_PLAYING
+            ) {
+                track.stop()
+            }
+        } finally {
+            synchronized(lock) {
+                if (player === track) player = null
+            }
+            // Playback owns final release; interruption only stops and flushes.
+            runCatching { track.release() }
         }
         return generation
     }
@@ -280,6 +290,8 @@ internal class NiaAndroidAudioEngine(
     private companion object {
         const val INPUT_SAMPLE_RATE = 16_000
         const val OUTPUT_SAMPLE_RATE = 24_000
+        const val PLAYBACK_BUFFER_BYTES = 8_192
+        const val PLAYBACK_WRITE_SAMPLES = 2_048
         const val FRAME_SAMPLES = 320 // 20 ms at 16 kHz
         const val START_VOICE_RMS = 0.018
         const val START_VOICE_FRAMES = 3
