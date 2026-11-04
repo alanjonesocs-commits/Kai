@@ -98,8 +98,12 @@ internal class NiaAndroidAudioEngine(
 
             audioRecord.startRecording()
             running.set(true)
-            captureThread = Thread({ captureLoop(audioRecord) }, "Nia-Pcm-Capture").apply {
-                priority = Process.THREAD_PRIORITY_AUDIO
+            captureThread = Thread({
+                // Android Linux thread priorities (including -16 for audio) are
+                // not Java Thread priorities (which must be between 1 and 10).
+                Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
+                captureLoop(audioRecord)
+            }, "Nia-Pcm-Capture").apply {
                 start()
             }
         }
