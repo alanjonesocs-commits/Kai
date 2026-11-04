@@ -238,12 +238,13 @@ internal class NiaAndroidAudioEngine(
         val old = synchronized(lock) {
             player.also { player = null }
         }
+        // Do not release here: playPcm may be inside a blocking write. The
+        // playback owner releases the track in its finally block after write exits.
         runCatching {
             old?.let {
                 if (it.playState == AudioTrack.PLAYSTATE_PLAYING) it.pause()
                 it.flush()
                 it.stop()
-                it.release()
             }
         }
     }
