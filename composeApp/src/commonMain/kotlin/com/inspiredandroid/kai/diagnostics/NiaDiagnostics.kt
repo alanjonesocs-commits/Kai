@@ -16,6 +16,7 @@ data class NiaDiagnosticEvent(
     val operation: String,
     val message: String,
     val exceptionType: String? = null,
+    val stackTrace: String? = null,
     val traceId: String,
 )
 
@@ -31,6 +32,7 @@ object NiaDiagnostics {
         operation: String,
         message: String,
         exceptionType: String? = null,
+        stackTrace: String? = null,
         traceId: String = createTraceId(),
     ): NiaDiagnosticEvent {
         val event = NiaDiagnosticEvent(
@@ -41,6 +43,7 @@ object NiaDiagnostics {
             operation = operation.take(100),
             message = redact(message).take(1000),
             exceptionType = exceptionType?.take(160),
+            stackTrace = stackTrace?.let(::redact)?.take(6000),
             traceId = traceId,
         )
         val updated = (readAll() + event).takeLast(MAX_EVENTS)
