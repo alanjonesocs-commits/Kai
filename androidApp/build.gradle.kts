@@ -1,3 +1,6 @@
+import java.net.URL
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -13,7 +16,7 @@ val downloadSherpaAar by tasks.registering {
     doLast {
         val output = sherpaAarFile.get().asFile
         fun sha256(file: java.io.File): String {
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = MessageDigest.getInstance("SHA-256")
             file.inputStream().buffered().use { input ->
                 val buffer = ByteArray(16 * 1024)
                 while (true) {
@@ -34,7 +37,7 @@ val downloadSherpaAar by tasks.registering {
         val temporary = output.resolveSibling("${output.name}.part")
         temporary.delete()
         try {
-            java.net.URL(
+            URL(
                 "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-2.0.1.aar"
             ).openStream().use { input ->
                 temporary.outputStream().buffered().use { destination ->
