@@ -309,6 +309,23 @@ fun QuestionInput(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     if (voiceConversationAvailable) {
+                        if (voiceConversationActive && speakingVoiceReply) {
+                            androidx.compose.material3.IconButton(
+                                onClick = {
+                                    speakingVoiceReply = false
+                                    awaitingVoiceReply = false
+                                    kotlinx.coroutines.CoroutineScope(getBackgroundDispatcher()).launch {
+                                        textToSpeech?.stop()
+                                    }
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Stop,
+                                    contentDescription = "Interrupt Nia and listen",
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
                         VoiceConversationControl(
                             active = voiceConversationActive,
                             listeningEnabled = voiceConversationActive &&
