@@ -82,6 +82,7 @@ import kai.composeapp.generated.resources.ic_up
 import kai.composeapp.generated.resources.prompt_ask_question
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import nl.marc_apps.tts.TextToSpeechInstance
@@ -145,6 +146,8 @@ fun QuestionInput(
                         textToSpeech.say(assistantReplyText.toSpeakableText())
                     }
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: TextToSpeechSynthesisInterruptedError) {
                 // The user ended the voice conversation while Nia was speaking.
             } catch (_: Exception) {
