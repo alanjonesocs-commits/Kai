@@ -31,6 +31,7 @@ fun CommandCentreScreen(
     onOpenSettings: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenProjects: () -> Unit,
+    onOpenBrainMonitor: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -57,6 +58,11 @@ fun CommandCentreScreen(
         Spacer(Modifier.height(28.dp))
         HolographicBrain(size = 232.dp)
         Spacer(Modifier.height(28.dp))
+        OutlinedButton(
+            onClick = onOpenBrainMonitor,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Brain monitor & memory") }
+        Spacer(Modifier.height(12.dp))
         Button(
             onClick = onOpenChat,
             modifier = Modifier.fillMaxWidth(),
