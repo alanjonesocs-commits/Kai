@@ -77,6 +77,14 @@ class MemoryBridgeTest {
         ).single()
         assertEquals(1_790_000_000_000L, restored.createdAt)
         assertEquals(1_790_000_123_456L, restored.updatedAt)
+
+        val exportedKai = memBundleToKaiJson(
+            MemBundle(PamManifest("legacy-export", exportTime, 1, ""), listOf(legacy)),
+            """{"version":1}""",
+        )
+        val roundTripped = kaiJsonToMemBundle(exportedKai, exportTime).episodes.single().toMemoryEntry()
+        assertEquals(restored.createdAt, roundTripped.createdAt)
+        assertEquals(restored.updatedAt, roundTripped.updatedAt)
     }
 
     @Test
