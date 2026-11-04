@@ -43,6 +43,7 @@ import com.inspiredandroid.kai.tools.SetupPermissionHandler
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.home.CommandCentreScreen
 import com.inspiredandroid.kai.ui.home.BrainDashboardScreen
+import com.inspiredandroid.kai.ui.home.Nia15MemoryLabScreen
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.ui.Theme
 import com.inspiredandroid.kai.ui.chat.ChatScreen
@@ -84,6 +85,10 @@ object Skills
 @Serializable
 @SerialName("brain_monitor")
 object BrainMonitor
+
+@Serializable
+@SerialName("nia15_memory_lab")
+object Nia15MemoryLab
 
 @Serializable
 @SerialName("projects")
@@ -244,6 +249,9 @@ private fun AppContent(
                             onOpenBrainMonitor = {
                                 navController.navigate(BrainMonitor) { launchSingleTop = true }
                             },
+                            onOpenMemoryLab = {
+                                navController.navigate(Nia15MemoryLab) { launchSingleTop = true }
+                            },
                         )
                     }
                     composable<BrainMonitor> {
@@ -251,6 +259,9 @@ private fun AppContent(
                             repository = dataRepository,
                             onBack = { navController.navigateUp() },
                         )
+                    }
+                    composable<Nia15MemoryLab> {
+                        Nia15MemoryLabScreen(onBack = { navController.navigateUp() })
                     }
                     composable<Skills> {
                         SettingsScreen(
