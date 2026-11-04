@@ -89,10 +89,17 @@ fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBu
     return MemBundle(manifest, (live + tombstones).sortedBy { it.id })
 }
 
-fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> = bundle.episodes
-    .filter { it.deletedAt == null }
-    .mapNotNull { runCatching { it.toMemoryEntry() }.getOrNull() }
-    .sortedWith(compareBy({ it.createdAt }, { it.key }))
+fun bundleToMemories(bundle: MemBundle): List<MemoryEntry> {
+    // A bundle is one import transaction: never silently discard malformed live records.
+    // Validate IDs across live records and tombstones before converting anything.
+    require(bundle.episodes.map { it.id }.distinct().size == bundle.episodes.size) {
+        "Memory bundle contains duplicate episode ids"
+    }
+    return bundle.episodes
+        .filter { it.deletedAt == null }
+        .map { it.toMemoryEntry() }
+        .sortedWith(compareBy({ it.createdAt }, { it.key }))
+}
 
 // --- JSON BRIDGES ---
 
