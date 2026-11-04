@@ -86,6 +86,7 @@ internal fun ExportImportSection(
     val isPreview = LocalInspectionMode.current
     val scope = rememberCoroutineScope()
     var importResult by remember { mutableStateOf<ImportResult?>(null) }
+    var memoryTransferDiagnostic by remember { mutableStateOf<String?>(null) }
     var importPreview by remember { mutableStateOf<Pair<String, ImmutableMap<ImportSection, String?>>?>(null) }
     var exportPreview by remember { mutableStateOf<ImmutableMap<ImportSection, String?>?>(null) }
 
@@ -130,10 +131,15 @@ internal fun ExportImportSection(
                         val merged = mergeBundles(currentBundle, remoteBundle, nowIso)
                         val newJson = memBundleToKaiJson(merged, currentJson)
 
-                        // FIXED: Changed 'true' to 'false' so it merges instead of wiping API keys
                         importResult = onImportSettings(newJson.encodeToByteArray(), setOf(ImportSection.MEMORY), false)
-                    } catch (_: Exception) {
+                        memoryTransferDiagnostic = if (importResult is ImportResult.Failure) {
+                            "Import was rejected by the settings layer."
+                        } else {
+                            null
+                        }
+                    } catch (error: Exception) {
                         importResult = ImportResult.Failure
+                        memoryTransferDiagnostic = "Import failed during ${error::class.simpleName ?: "unknown error"}."
                     }
                 }
             }
@@ -222,16 +228,27 @@ internal fun ExportImportSection(
         OutlinedButton(
             onClick = {
                 importResult = null
-                val nowIso = Clock.System.now().toString()
-                val kaiJson = onExportSettings(setOf(ImportSection.MEMORY))
-                val bundle = kaiJsonToMemBundle(kaiJson, nowIso)
-                val memString = bundle.toJsonLines()
-                scope.launch {
-                    saveFileToDevice(
-                        bytes = memString.encodeToByteArray(),
-                        baseName = "nia-memory",
-                        extension = "mem",
-                    )
+                memoryTransferDiagnostic = null
+                try {
+                    val nowIso = Clock.System.now().toString()
+                    val kaiJson = onExportSettings(setOf(ImportSection.MEMORY))
+                    val bundle = kaiJsonToMemBundle(kaiJson, nowIso)
+                    val memString = bundle.toJsonLines()
+                    scope.launch {
+                        try {
+                            saveFileToDevice(
+                                bytes = memString.encodeToByteArray(),
+                                baseName = "nia-memory",
+                                extension = "mem",
+                            )
+                        } catch (error: Exception) {
+                            importResult = ImportResult.Failure
+                            memoryTransferDiagnostic = "Export save failed during ${error::class.simpleName ?: "unknown error"}."
+                        }
+                    }
+                } catch (error: Exception) {
+                    importResult = ImportResult.Failure
+                    memoryTransferDiagnostic = "Export preparation failed during ${error::class.simpleName ?: "unknown error"}."
                 }
             },
             modifier = Modifier.handCursor(),
@@ -261,6 +278,14 @@ internal fun ExportImportSection(
             style = MaterialTheme.typography.bodySmall,
             color = color,
         )
+        memoryTransferDiagnostic?.let { diagnostic ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = diagnostic,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 
