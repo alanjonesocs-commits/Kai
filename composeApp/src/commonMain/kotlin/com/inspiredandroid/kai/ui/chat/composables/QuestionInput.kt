@@ -315,10 +315,12 @@ fun QuestionInput(
                         if (voiceConversationActive && speakingVoiceReply) {
                             androidx.compose.material3.IconButton(
                                 onClick = {
-                                    speakingVoiceReply = false
-                                    awaitingVoiceReply = false
                                     voiceScope.launch {
-                                        textToSpeech?.stop()
+                                        withContext(getBackgroundDispatcher()) {
+                                            textToSpeech?.stop()
+                                        }
+                                        speakingVoiceReply = false
+                                        awaitingVoiceReply = false
                                     }
                                 },
                             ) {
