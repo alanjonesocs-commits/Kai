@@ -66,6 +66,9 @@ def validate_snapshot(document: Any) -> dict[str, Any]:
     created = document.get("created_at_epoch_ms")
     if not _is_int(created) or created < 0:
         errors.append("created_at_epoch_ms must be a non-negative integer")
+    source_generation = document.get("source_generation")
+    if source_generation is not None and (not _is_int(source_generation) or source_generation < 0):
+        errors.append("source_generation must be a non-negative integer when supplied")
     source = document.get("source")
     if not isinstance(source, dict) or not isinstance(source.get("system"), str):
         errors.append("source.system is required")
