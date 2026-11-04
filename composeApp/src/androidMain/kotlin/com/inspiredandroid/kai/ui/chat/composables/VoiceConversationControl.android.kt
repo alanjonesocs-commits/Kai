@@ -73,7 +73,12 @@ actual fun VoiceConversationControl(
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
         try {
             // The first voice session downloads the pinned ~43 MB model into app-private
-            // storage. Later sessions reuse the verified local files.
+            // storage. Later sessions reuse the locally checked model files.
+            Toast.makeText(
+                context,
+                "Preparing Nia's offline speech model if needed…",
+                Toast.LENGTH_SHORT,
+            ).show()
             val modelDirectory = NiaSherpaModelInstaller.ensureInstalled(context)
             val recognizer = withContext(Dispatchers.Default) {
                 NiaSherpaStreamingRecognizer(
