@@ -8,6 +8,8 @@ on:
       - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/**"
       - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/nia/memory/**"
       - ".github/workflows/nia15-memory-integrity.yml"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/App.kt"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/ui/home/**"
   pull_request:
     paths:
       - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/**"
@@ -40,5 +42,24 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
+
+      - name: Grant Gradle wrapper permission
+        run: chmod +x ./gradlew
+
       - name: Run desktop unit tests
         run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+
+      - name: Compile Android FOSS debug APK
+        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
+
+      - name: Upload Pixel installation APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nia15-brain-monitor-foss-debug-apk
+          path: androidApp/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
