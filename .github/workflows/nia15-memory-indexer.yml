@@ -8,6 +8,8 @@ on:
       - "tools/nia-memory-indexer/**"
       - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
       - "composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt"
+      - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt"
       - "composeApp/build.gradle.kts"
       - "gradle/**"
       - "gradlew"
@@ -67,4 +69,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Verify Android snapshot encoder against shared fixture
-        run: ./gradlew :composeApp:testAndroidHostTest
+        run: |
+          ./gradlew :composeApp:testAndroidHostTest
+          ./gradlew :composeApp:desktopTest --tests "com.inspiredandroid.kai.data.AppSettingsTest"
