@@ -288,6 +288,12 @@ class AppSettings(internal val settings: Settings) {
         settings.putString(KEY_NIA15_LAB_MEMORIES, json)
     }
 
+    fun isNia15LabChatRetrievalEnabled(): Boolean = settings.getBoolean(KEY_NIA15_LAB_CHAT_RETRIEVAL_ENABLED, false)
+
+    fun setNia15LabChatRetrievalEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_NIA15_LAB_CHAT_RETRIEVAL_ENABLED, enabled)
+    }
+
     // Scheduling
     fun isSchedulingEnabled(): Boolean = settings.getBoolean(KEY_SCHEDULING_ENABLED, true)
 
@@ -584,6 +590,7 @@ class AppSettings(internal val settings: Settings) {
         const val KEY_MEMORY_INSTRUCTIONS = "memory_instructions"
         const val KEY_AGENT_MEMORIES = "agent_memories"
         const val KEY_NIA15_LAB_MEMORIES = "nia15_synthetic_lab_memories_v1"
+        const val KEY_NIA15_LAB_CHAT_RETRIEVAL_ENABLED = "nia15_synthetic_lab_chat_retrieval_enabled"
         const val KEY_CORRUPT_JSON_BACKUP_PREFIX = "corrupt_json_backup."
         const val KEY_SCHEDULED_TASKS = "scheduled_tasks"
         const val KEY_SCHEDULING_ENABLED = "scheduling_enabled"
