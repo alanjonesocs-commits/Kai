@@ -109,6 +109,18 @@ object Nia15LabMemoryData {
     fun reject(records: List<Nia15LabMemory>, id: String): List<Nia15LabMemory> =
         updateDecision(records, id, "REJECTED")
 
+    fun approvedPromptContext(raw: String): String? =
+        decode(raw)
+            .filter { it.captureDecision == "APPROVED" }
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString("\n") { record ->
+                val provenanceText = record.provenance.joinToString("; ") { source ->
+                    "source=${source.source ?: "null"}, conversationId=${source.conversationId ?: "null"}, observedAt=${source.observedAt}"
+                }.ifEmpty { "[]" }
+                "- **${record.key}** [receipt: ${record.receiptStatus}; claim: ${record.claimStatus}; actual fact: ${record.factStatus}; resolution: ${record.resolutionStatus}]\n" +
+                    "  ${record.content}\n  provenance: ${provenanceText}"
+            }
+
     fun addSyntheticFollowUp(records: List<Nia15LabMemory>): List<Nia15LabMemory> {
         val nextNumber = records.size + 1
         val latestObservedAt = records.flatMap { it.provenance }.maxOfOrNull { it.observedAt } ?: 0L
