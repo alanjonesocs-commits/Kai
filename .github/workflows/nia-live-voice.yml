@@ -1,6 +1,9 @@
 name: Nia Live Voice Verification
 
 on:
+  push:
+    branches:
+      - build/nia15-full-duplex-wakeword
   pull_request:
     branches:
       - frankenstai/three-hour-engineering
