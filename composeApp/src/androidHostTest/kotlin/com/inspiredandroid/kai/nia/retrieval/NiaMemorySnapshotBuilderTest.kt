@@ -63,6 +63,59 @@ class NiaMemorySnapshotBuilderTest {
     }
 
     @Test
+    fun syntheticFixtureRecordsMatchPythonIndexerSha256() {
+        fun entry(
+            id: String,
+            key: String,
+            content: String,
+            timestamp: Long,
+            category: MemoryCategory,
+            claim: MemoryAssessment,
+            resolution: MemoryAssessment,
+            conversation: String,
+        ) = MemoryEntry(
+            key = key,
+            content = content,
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            category = category,
+            hitCount = 1,
+            source = "synthetic_test",
+            id = id,
+            receiptStatus = MemoryAssessment.CONFIRMED,
+            claimStatus = claim,
+            factStatus = MemoryAssessment.UNKNOWN,
+            resolutionStatus = resolution,
+            sourceConversationId = conversation,
+            provenance = listOf(
+                MemoryProvenance("synthetic_test", conversation, timestamp),
+            ),
+        )
+
+        val records = listOf(
+            entry("mem-syn-001", "notebook.preference", "Fictional test user prefers green notebooks.", 1793529000000, MemoryCategory.PREFERENCE, MemoryAssessment.REPORTED, MemoryAssessment.UNKNOWN, "synthetic-conversation-001"),
+            entry("mem-syn-002", "workspace.preference", "Fictional test user said their preferred workspace is Room A.", 1793610000000, MemoryCategory.GENERAL, MemoryAssessment.REPORTED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-002"),
+            entry("mem-syn-003", "workspace.preference", "Fictional test user later said their preferred workspace is Room B.", 1793696400000, MemoryCategory.GENERAL, MemoryAssessment.REPORTED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-003"),
+            entry("mem-syn-004", "workspace.current_status", "Fictional test user's current preferred workspace has not been established.", 1793700000000, MemoryCategory.GENERAL, MemoryAssessment.UNKNOWN, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-004"),
+            entry("mem-syn-005", "workspace.change_hint", "A fictional note suggests a possible change to the user's workspace preference.", 1793770500000, MemoryCategory.LEARNING, MemoryAssessment.ASSUMED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-005"),
+        )
+
+        val document = json.parseToJsonElement(
+            NiaMemorySnapshotBuilder.build(
+                records = records,
+                snapshotId = "snap-synthetic-000001",
+                createdAtEpochMs = 1793770800000,
+            ),
+        ).jsonObject
+
+        assertEquals(
+            "8f1737efc3229fefb61e5e658e1216c41c1d261370e5934fcfac823e8646919b",
+            document["records_hash"]?.jsonPrimitive?.content,
+            "Kotlin snapshot hashing must match the checked-in Python indexer fixture",
+        )
+    }
+
+    @Test
     fun duplicateIdsAreRejectedWithoutRepair() {
         assertFailsWith<IllegalArgumentException> {
             NiaMemorySnapshotBuilder.build(
