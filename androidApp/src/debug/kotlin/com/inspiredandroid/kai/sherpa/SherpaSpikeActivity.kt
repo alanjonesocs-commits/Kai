@@ -19,7 +19,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
-import androidx.activity.result.contract.ActivityResultContracts
 import com.k2fsa.sherpa.onnx.EndpointConfig
 import com.k2fsa.sherpa.onnx.EndpointRule
 import com.k2fsa.sherpa.onnx.FeatureConfig
@@ -45,6 +44,7 @@ private const val SAMPLE_RATE = 16_000
 private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
 private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 private const val REQUEST_MICROPHONE = 4107
+private const val REQUEST_EXPORT_REPORT = 4108
 private const val CHUNK_SAMPLES = 1_600 // 100 ms at 16 kHz
 
 private data class SpikeModel(
@@ -91,23 +91,6 @@ class SherpaSpikeActivity : Activity() {
     private var wavFile: File? = null
     private var pcmBytesWritten = 0L
     private var pendingExportFile: File? = null
-
-    private val exportReport = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        val source = pendingExportFile
-        pendingExportFile = null
-        if (uri == null || source == null) {
-            appendStatus("Report export cancelled.")
-        } else {
-            try {
-                contentResolver.openOutputStream(uri)?.use { output ->
-                    source.inputStream().buffered().use { it.copyTo(output) }
-                } ?: error("Could not open the selected destination")
-                appendStatus("Report exported successfully: ${source.name}")
-            } catch (error: Exception) {
-                appendStatus("Report export failed: ${error.javaClass.simpleName}: ${error.message}")
-            }
-        }
-    }
 
     private val modelRoot: File
         get() = File(filesDir, "sherpa-spike/models")
@@ -580,7 +563,38 @@ class SherpaSpikeActivity : Activity() {
             return
         }
         pendingExportFile = latest
-        exportReport.launch(latest.name)
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, latest.name)
+        }
+        try {
+            startActivityForResult(intent, REQUEST_EXPORT_REPORT)
+        } catch (error: Exception) {
+            pendingExportFile = null
+            appendStatus("Could not open document picker: ${error.javaClass.simpleName}: ${error.message}")
+        }
+    }
+
+    @Deprecated("Uses Activity's legacy result callback for compatibility with this Activity base class")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_EXPORT_REPORT) return
+        val source = pendingExportFile
+        pendingExportFile = null
+        val uri = data?.data
+        if (resultCode != RESULT_OK || uri == null || source == null) {
+            appendStatus("Report export cancelled.")
+            return
+        }
+        try {
+            contentResolver.openOutputStream(uri)?.use { output ->
+                source.inputStream().buffered().use { it.copyTo(output) }
+            } ?: error("Could not open the selected destination")
+            appendStatus("Report exported successfully: ${source.name}")
+        } catch (error: Exception) {
+            appendStatus("Report export failed: ${error.javaClass.simpleName}: ${error.message}")
+        }
     }
 
     private fun sha256(file: File): String {
