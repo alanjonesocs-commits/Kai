@@ -164,7 +164,7 @@ kotlin {
                 implementation(libs.xz)
                 // The Android AAR already contains the Sherpa JVM API classes.
                 // Exclude JitPack's duplicate JVM JAR while retaining the AAR and its native .so files.
-                implementation(libs.sherpa.onnx) {
+                implementation(libs.sherpa.onnx.get()) {
                     exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
                 }
             }
