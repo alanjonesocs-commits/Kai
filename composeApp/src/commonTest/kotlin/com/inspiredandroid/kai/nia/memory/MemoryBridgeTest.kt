@@ -143,6 +143,28 @@ class MemoryBridgeTest {
     }
 
     @Test
+    fun memBundleJsonLinesExportCanBeImportedWithoutLosingEpisodeData() {
+        val original = bundle(
+            PamEpisode(
+                id = "claim-1",
+                timestamp = "2026-10-23T10:00:00Z",
+                updatedAt = "2026-10-23T11:00:00Z",
+                key = "residence",
+                content = "Manchester",
+                category = "GENERAL",
+                source = "conversation",
+                claimStatus = "REPORTED",
+                factStatus = "UNKNOWN",
+                resolutionStatus = "NEEDS_VERIFICATION",
+            ),
+        )
+
+        val restored = MemBundle.parseEpisodes(original.toJsonLines())
+
+        assertEquals(original.episodes, restored)
+    }
+
+    @Test
     fun memoryBundleImportRejectsDuplicateIdsAndInvalidTimestamps() {
         val duplicateIdEpisodes = listOf(episode("same"), episode("same"))
             .joinToString("\n") { kotlinx.serialization.json.Json.encodeToString(PamEpisode.serializer(), it) }
