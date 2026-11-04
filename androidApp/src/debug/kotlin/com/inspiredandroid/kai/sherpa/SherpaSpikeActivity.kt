@@ -48,6 +48,7 @@ private data class SpikeModel(
     val id: String,
     val label: String,
     val repository: String,
+    val revision: String,
     val encoder: String,
     val decoder: String,
     val joiner: String,
@@ -59,15 +60,17 @@ private val SPIKE_MODELS = listOf(
         id = "zipformer-en-20m-2023-02-17",
         label = "Zipformer English 20M (INT8 encoder)",
         repository = "csukuangfj/sherpa-onnx-streaming-zipformer-en-20M-2023-02-17",
+        revision = "d42f2d9f7ca24806fb667456a18a9f1b60f70d16",
         encoder = "encoder-epoch-99-avg-1.int8.onnx",
         decoder = "decoder-epoch-99-avg-1.onnx",
-        joiner = "joiner-epoch-99-avg-1.onnx",
+        joiner = "joiner-epoch-99-avg-1.int8.onnx",
         minimumEncoderBytes = 40_000_000L,
     ),
     SpikeModel(
         id = "zipformer-en-2023-06-21",
         label = "Zipformer English 2023-06-21 (INT8 encoder)",
         repository = "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-21",
+        revision = "9a65b6ea94c311ca770c2bf895b30f456a22d703",
         encoder = "encoder-epoch-99-avg-1.int8.onnx",
         decoder = "decoder-epoch-99-avg-1.onnx",
         joiner = "joiner-epoch-99-avg-1.int8.onnx",
@@ -296,7 +299,7 @@ class SherpaSpikeActivity : Activity() {
                         continue
                     }
                     val temporary = File(directory, "$name.part")
-                    val url = URL("https://huggingface.co/${model.repository}/resolve/main/$name?download=true")
+                    val url = URL("https://huggingface.co/${model.repository}/resolve/${model.revision}/$name?download=true")
                     val connection = (url.openConnection() as HttpURLConnection).apply {
                         connectTimeout = 20_000
                         readTimeout = 120_000
