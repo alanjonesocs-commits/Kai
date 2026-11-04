@@ -60,6 +60,7 @@ import com.inspiredandroid.kai.sms.SmsSender
 import com.inspiredandroid.kai.tools.NotificationListenerController
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.ui.chat.History
+import com.inspiredandroid.kai.ui.home.Nia15LabMemoryData
 import com.inspiredandroid.kai.ui.chat.ToolCallInfo
 import com.inspiredandroid.kai.ui.chat.toGeminiMessageDto
 import com.inspiredandroid.kai.ui.settings.SettingsModel
@@ -1823,6 +1824,29 @@ class RemoteDataRepository(
 
         val memories = if (memoryEnabled) memoryStore.getAllMemories() else emptyList()
         val byCategory = memories.groupBy { it.category }
+        // Experimental retrieval is opt-in and reads only the dedicated synthetic-lab key.
+        // It never imports these records into MemoryStore or the canonical agent_memories key.
+        val nia15LabMemoryContext = if (memoryEnabled && appSettings.isNia15LabChatRetrievalEnabled()) {
+            val rawLabMemories = appSettings.getNia15LabMemoriesJsonOrNull()
+            if (rawLabMemories == null) {
+                null
+            } else {
+                runCatching { Nia15LabMemoryData.decode(rawLabMemories) }
+                    .map { records -> records.filter { it.captureDecision == "APPROVED" } }
+                    .fold(
+                        onSuccess = { records -> records.joinToString("\\n") { record ->
+                            val provenanceText = record.provenance.joinToString("; ") { source ->
+                                "source=${source.source ?: "null"}, conversationId=${source.conversationId ?: "null"}, observedAt=${source.observedAt}"
+                            }.ifEmpty { "[]" }
+                            "- **${record.key}** [receipt: ${record.receiptStatus}; claim: ${record.claimStatus}; actual fact: ${record.factStatus}; resolution: ${record.resolutionStatus}]\\n" +
+                                "  ${record.content}\\n  provenance: ${provenanceText}"
+                        } }.takeIf { it.isNotBlank() },
+                        onFailure = { "Synthetic test-memory retrieval is unavailable because the isolated lab data failed validation. Do not infer or substitute records." },
+                    )
+            }
+        } else {
+            null
+        }
 
         val tasksSplit = if (schedulingEnabled) taskStore.getPendingTasksPartitioned() else PendingTaskPartition(emptyList(), emptyList())
         val pendingTasks = tasksSplit.scheduled
@@ -1907,6 +1931,7 @@ class RemoteDataRepository(
             runtime = runtime,
             uiMode = uiMode,
             activeSkill = activeSkill,
+            nia15LabMemoryContext = nia15LabMemoryContext,
         ).ifEmpty { null }
     }
 
