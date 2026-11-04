@@ -218,8 +218,8 @@ internal fun buildChatSystemPrompt(
     appendMemoryCategorySection("Known Issues & Resolutions", errorMemories, withHitCount = false, remaining)
 
     if (!nia15LabMemoryContext.isNullOrBlank()) {
-        append("\\n\\n## NIA15 Synthetic Memory Lab — TEST DATA ONLY\\n")
-        append("The following records are fictional test data, not facts about the user. Preserve their evidence classifications. Do not save, edit, delete, or merge these records into canonical memory.\\n")
+        append("\n\n## NIA15 Synthetic Memory Lab — TEST DATA ONLY\n")
+        append("The following records are fictional test data, not facts about the user. Preserve their evidence classifications. Do not save, edit, delete, or merge these records into canonical memory.\n")
         append(nia15LabMemoryContext.trim())
     }
 
