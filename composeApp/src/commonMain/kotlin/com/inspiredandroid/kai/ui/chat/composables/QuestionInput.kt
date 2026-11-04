@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +85,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.marc_apps.tts.TextToSpeechInstance
 import nl.marc_apps.tts.errors.TextToSpeechSynthesisInterruptedError
@@ -119,6 +121,7 @@ fun QuestionInput(
     var speakingVoiceReply by remember { mutableStateOf(false) }
     var lastVoiceReplyId by remember { mutableStateOf(assistantReplyId) }
     var wasVoiceConversationActive by remember { mutableStateOf(false) }
+    val voiceScope = rememberCoroutineScope()
 
     LaunchedEffect(voiceConversationActive) {
         if (voiceConversationActive != wasVoiceConversationActive) {
@@ -314,13 +317,13 @@ fun QuestionInput(
                                 onClick = {
                                     speakingVoiceReply = false
                                     awaitingVoiceReply = false
-                                    kotlinx.coroutines.CoroutineScope(getBackgroundDispatcher()).launch {
+                                    voiceScope.launch {
                                         textToSpeech?.stop()
                                     }
                                 },
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Stop,
+                                    painter = painterResource(Res.drawable.ic_stop),
                                     contentDescription = "Interrupt Nia and listen",
                                     tint = MaterialTheme.colorScheme.error,
                                 )
