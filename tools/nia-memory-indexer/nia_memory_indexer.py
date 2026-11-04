@@ -300,7 +300,7 @@ def index_snapshot(
             try:
                 db_path = temp_dir / "memory.sqlite"
                 _create_index(db_path, document)
-                with db_path.open("rb") as handle:
+                with db_path.open("rb+") as handle:
                     os.fsync(handle.fileno())
                 _fsync_dir(temp_dir)
                 os.replace(temp_dir, final_dir)
@@ -310,7 +310,7 @@ def index_snapshot(
                     json.dumps({"generation": generation}, separators=(",", ":")),
                     encoding="utf-8",
                 )
-                with pointer_tmp.open("rb") as handle:
+                with pointer_tmp.open("rb+") as handle:
                     os.fsync(handle.fileno())
                 os.replace(pointer_tmp, root / "CURRENT")
                 _fsync_dir(root)
