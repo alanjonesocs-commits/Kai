@@ -24,6 +24,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 actual fun VoiceConversationControl(
@@ -93,14 +94,20 @@ actual fun VoiceConversationControl(
             }
             streamingRecognizer = recognizer
 
+            val recognitionFailureReported = AtomicBoolean(false)
             val engine = NiaAndroidAudioEngine(
                 onPcmFrame = { samples, _ ->
                     runCatching { recognizer.acceptPcm16(samples) }
                         .onFailure { failure ->
-                            scope.launch {
-                                latestOnError.value(
-                                    failure.message ?: "Local speech recognition failed.",
-                                )
+                            // Audio callbacks run every 20 ms. Report a native/runtime
+                            // failure once, then end the session instead of flooding UI.
+                            if (recognitionFailureReported.compareAndSet(false, true)) {
+                                scope.launch {
+                                    latestOnError.value(
+                                        failure.message ?: "Local speech recognition failed.",
+                                    )
+                                    latestOnActiveChange.value(false)
+                                }
                             }
                         }
                 },
