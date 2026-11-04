@@ -25,7 +25,6 @@ object NiaDiagnostics {
     private val settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true }
 
-    @Synchronized
     fun record(
         severity: String,
         component: String,
@@ -49,14 +48,12 @@ object NiaDiagnostics {
         return event
     }
 
-    @Synchronized
     fun readAll(): List<NiaDiagnosticEvent> {
         val stored = settings.getStringOrNull(STORAGE_KEY) ?: return emptyList()
         return runCatching { json.decodeFromString<List<NiaDiagnosticEvent>>(stored) }
             .getOrDefault(emptyList())
     }
 
-    @Synchronized
     fun clear() {
         settings.remove(STORAGE_KEY)
     }
