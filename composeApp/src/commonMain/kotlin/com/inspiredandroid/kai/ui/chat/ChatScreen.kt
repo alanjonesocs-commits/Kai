@@ -959,6 +959,11 @@ private fun ChatModeScreen(
                     availableServices = uiState.availableServices,
                     onSelectService = uiState.actions.selectService,
                     installedSkills = uiState.installedSkills,
+                    voiceConversationAvailable = true,
+                    assistantReplyId = uiState.history.lastRenderedAssistant()?.id,
+                    assistantReplyText = uiState.history.lastRenderedAssistant()?.content,
+                    hasError = uiState.error != null,
+                    textToSpeech = textToSpeech,
                 )
             }
         }
