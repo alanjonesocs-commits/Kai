@@ -77,9 +77,27 @@ class MemoryBridgeTest {
     }
 
     @Test
-    fun malformedEpisodeIsSkippedNotFatal() {
-        val result = bundleToMemories(bundle(episode("good"), episode("bad", timestamp = "not a date")))
-        assertEquals(listOf("good"), result.map { it.key })
+    fun malformedLiveEpisodeFailsTheWholeImportInsteadOfBeingSilentlyDropped() {
+        assertFailsWith<IllegalArgumentException> {
+            bundleToMemories(bundle(episode("good"), episode("bad", timestamp = "not a date")))
+        }
+    }
+
+    @Test
+    fun duplicateEpisodeIdsFailTheWholeImport() {
+        val duplicateA = episode("same")
+        val duplicateB = duplicateA.copy(content = "different payload")
+        assertFailsWith<IllegalArgumentException> {
+            bundleToMemories(bundle(duplicateA, duplicateB))
+        }
+    }
+
+    @Test
+    fun importingTheSameBundleTwiceDoesNotMutateMemoryRecords() {
+        val original = bundle(episode("stable"))
+        val first = bundleToMemories(original)
+        val second = bundleToMemories(original)
+        assertEquals(first, second)
     }
 
     @Test
