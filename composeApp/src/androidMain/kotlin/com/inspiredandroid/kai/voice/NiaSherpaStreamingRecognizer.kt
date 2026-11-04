@@ -104,7 +104,7 @@ internal class NiaSherpaStreamingRecognizer(
         const val FEATURE_DIM = 80
         const val MODEL_THREADS = 2
         const val ENCODER_FILE = "encoder-epoch-99-avg-1.int8.onnx"
-        const val DECODER_FILE = "decoder-epoch-99-avg-1.int8.onnx"
+        const val DECODER_FILE = "decoder-epoch-99-avg-1.onnx"
         const val JOINER_FILE = "joiner-epoch-99-avg-1.int8.onnx"
         const val TOKENS_FILE = "tokens.txt"
     }
