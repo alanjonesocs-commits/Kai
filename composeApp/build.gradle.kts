@@ -162,6 +162,7 @@ kotlin {
                 implementation(libs.litert.lm)
                 implementation(libs.sqldelight.android.driver)
                 implementation(libs.xz)
+                implementation(libs.sherpa.onnx)
             }
         }
         getByName("desktopMain") {
