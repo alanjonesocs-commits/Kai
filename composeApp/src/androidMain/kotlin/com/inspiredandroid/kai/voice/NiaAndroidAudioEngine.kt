@@ -106,15 +106,30 @@ internal class NiaAndroidAudioEngine(
     }
 
     private fun captureLoop(audioRecord: AudioRecord) {
+        // AudioRecord is allowed to return fewer samples than requested. Accumulate
+        // them so downstream streaming recognisers always receive exact 20 ms frames.
         val frame = ShortArray(frameSamples)
+        var filled = 0
         try {
             while (running.get()) {
-                val count = audioRecord.read(frame, 0, frame.size, AudioRecord.READ_BLOCKING)
-                if (count <= 0) continue
-                val samples = if (count == frame.size) frame.copyOf() else frame.copyOf(count)
-                val rms = calculateRms(samples)
-                updateVoiceActivity(rms)
-                onPcmFrame(samples, System.nanoTime())
+                val count = audioRecord.read(
+                    frame,
+                    filled,
+                    frame.size - filled,
+                    AudioRecord.READ_BLOCKING,
+                )
+                if (count < 0) {
+                    if (count == AudioRecord.ERROR_DEAD_OBJECT) break
+                    continue
+                }
+                if (count == 0) continue
+                filled += count
+                if (filled == frame.size) {
+                    val samples = frame.copyOf()
+                    updateVoiceActivity(calculateRms(samples))
+                    onPcmFrame(samples, System.nanoTime())
+                    filled = 0
+                }
             }
         } catch (_: IllegalStateException) {
             // Recorder was stopped or invalidated by Android while the session ended.
