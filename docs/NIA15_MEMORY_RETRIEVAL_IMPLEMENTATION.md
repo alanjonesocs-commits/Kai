@@ -192,7 +192,7 @@ environment.
 
 ## Debian Python availability observed in source
 
-LinuxDistro.DE BIAN (Debian 12) declares python3 in its basePackages list.
+LinuxDistro.DEBIAN (Debian 12) declares python3 in its basePackages list.
 LinuxSandboxManager.arePackagesInstalled() checks for both /usr/bin/python3
 and /usr/bin/ssh before reporting the optional package set as installed.
 This is source-level evidence that a fresh Debian install is intended to
