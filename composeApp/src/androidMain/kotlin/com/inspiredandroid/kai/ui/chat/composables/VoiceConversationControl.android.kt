@@ -30,6 +30,8 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import java.util.concurrent.atomic.AtomicBoolean
 
+private const val PCM_QUEUE_CAPACITY = 25
+
 @Composable
 actual fun VoiceConversationControl(
     active: Boolean,
@@ -185,7 +187,4 @@ actual fun VoiceConversationControl(
         }
     }
 
-    private companion object {
-        const val PCM_QUEUE_CAPACITY = 25
-    }
 }
