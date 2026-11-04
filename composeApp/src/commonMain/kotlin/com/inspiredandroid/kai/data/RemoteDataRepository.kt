@@ -1831,16 +1831,9 @@ class RemoteDataRepository(
             if (rawLabMemories == null) {
                 null
             } else {
-                runCatching { Nia15LabMemoryData.decode(rawLabMemories) }
-                    .map { records -> records.filter { it.captureDecision == "APPROVED" } }
+                runCatching { Nia15LabMemoryData.approvedPromptContext(rawLabMemories) }
                     .fold(
-                        onSuccess = { records -> records.joinToString("\n") { record ->
-                            val provenanceText = record.provenance.joinToString("; ") { source ->
-                                "source=${source.source ?: "null"}, conversationId=${source.conversationId ?: "null"}, observedAt=${source.observedAt}"
-                            }.ifEmpty { "[]" }
-                            "- **${record.key}** [receipt: ${record.receiptStatus}; claim: ${record.claimStatus}; actual fact: ${record.factStatus}; resolution: ${record.resolutionStatus}]\n" +
-                                "  ${record.content}\n  provenance: ${provenanceText}"
-                        } }.takeIf { it.isNotBlank() },
+                        onSuccess = { it },
                         onFailure = { "Synthetic test-memory retrieval is unavailable because the isolated lab data failed validation. Do not infer or substitute records." },
                     )
             }
