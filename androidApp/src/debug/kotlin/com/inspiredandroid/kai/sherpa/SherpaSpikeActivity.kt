@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import com.k2fsa.sherpa.onnx.EndpointConfig
 import com.k2fsa.sherpa.onnx.EndpointRule
 import com.k2fsa.sherpa.onnx.FeatureConfig
@@ -89,6 +90,24 @@ class SherpaSpikeActivity : Activity() {
     private var recordingThread: Thread? = null
     private var wavFile: File? = null
     private var pcmBytesWritten = 0L
+    private var pendingExportFile: File? = null
+
+    private val exportReport = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        val source = pendingExportFile
+        pendingExportFile = null
+        if (uri == null || source == null) {
+            appendStatus("Report export cancelled.")
+        } else {
+            try {
+                contentResolver.openOutputStream(uri)?.use { output ->
+                    source.inputStream().buffered().use { it.copyTo(output) }
+                } ?: error("Could not open the selected destination")
+                appendStatus("Report exported successfully: ${source.name}")
+            } catch (error: Exception) {
+                appendStatus("Report export failed: ${error.javaClass.simpleName}: ${error.message}")
+            }
+        }
+    }
 
     private val modelRoot: File
         get() = File(filesDir, "sherpa-spike/models")
@@ -143,6 +162,8 @@ class SherpaSpikeActivity : Activity() {
         addButton(root, "Run same WAV — 20M model") { runModel(SPIKE_MODELS[0]) }
         addButton(root, "Run same WAV — 2023-06-21 model") { runModel(SPIKE_MODELS[1]) }
         addButton(root, "Show local files and SHA-256") { showLocalFiles() }
+        addButton(root, "List saved recognition reports") { listSavedReports() }
+        addButton(root, "Export latest recognition report") { exportLatestReport() }
 
         root.addView(status, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -532,6 +553,34 @@ class SherpaSpikeActivity : Activity() {
             appendLine("Results folder: ${resultsRoot.absolutePath}")
         }
         appendStatus(details)
+    }
+
+    private fun listSavedReports(): List<File> {
+        val reports = resultsRoot.listFiles()
+            ?.filter { it.isFile && it.extension.equals("txt", ignoreCase = true) }
+            ?.sortedByDescending { it.lastModified() }
+            .orEmpty()
+        appendStatus(
+            if (reports.isEmpty()) {
+                "No report files found in: ${resultsRoot.absolutePath}"
+            } else {
+                "Saved recognition reports (${reports.size}):\n" +
+                    reports.joinToString("\n") { "${it.name} (${it.length()} bytes)" }
+            }
+        )
+        return reports
+    }
+
+    private fun exportLatestReport() {
+        val latest = resultsRoot.listFiles()
+            ?.filter { it.isFile && it.extension.equals("txt", ignoreCase = true) }
+            ?.maxByOrNull { it.lastModified() }
+        if (latest == null) {
+            appendStatus("No saved report found to export. Run a model first, then try again.")
+            return
+        }
+        pendingExportFile = latest
+        exportReport.launch(latest.name)
     }
 
     private fun sha256(file: File): String {
