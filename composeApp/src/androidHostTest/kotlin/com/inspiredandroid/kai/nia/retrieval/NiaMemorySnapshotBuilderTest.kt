@@ -5,6 +5,9 @@ import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
 import com.inspiredandroid.kai.data.MemoryProvenance
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -60,6 +63,67 @@ class NiaMemorySnapshotBuilderTest {
         assertNotNull(record["source"])
         assertNotNull(record["sourceConversationId"])
         assertEquals(1, record["provenance"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun rawSnapshotPreservesUnknownFieldsWithoutTypedModelLoss() {
+        val typedDocument = json.parseToJsonElement(
+            NiaMemorySnapshotBuilder.build(
+                records = listOf(syntheticEntry()),
+                snapshotId = "snap-synthetic-raw",
+                createdAtEpochMs = 1_762_000_100_000,
+            ),
+        ).jsonObject
+        val rawRecord = typedDocument["records"]!!.jsonArray.single().jsonObject.toMutableMap()
+        rawRecord["futureFieldFromNewerBuild"] = JsonPrimitive("preserve-this")
+        val raw = JsonArray(listOf(JsonObject(rawRecord))).toString()
+
+        val snapshot = json.parseToJsonElement(
+            NiaMemorySnapshotBuilder.buildFromRawJson(
+                rawMemoryJson = raw,
+                snapshotId = "snap-synthetic-raw",
+                createdAtEpochMs = 1_762_000_100_000,
+            ),
+        ).jsonObject
+        val exportedRecord = snapshot["records"]!!.jsonArray.single().jsonObject
+
+        assertEquals("preserve-this", exportedRecord["futureFieldFromNewerBuild"]?.jsonPrimitive?.content)
+        assertEquals("synthetic-001", exportedRecord["id"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun malformedRawJsonFailsClosed() {
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson("{not-json")
+        }
+    }
+
+    @Test
+    fun blankRawJsonFailsClosedInsteadOfProducingEmptySnapshot() {
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson("  ")
+        }
+    }
+
+    @Test
+    fun incompleteLegacyRecordFailsClosedWithoutMigration() {
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson(
+                """[{"key":"legacy-key","content":"legacy content"}]""",
+            )
+        }
+    }
+
+    @Test
+    fun rawSnapshotRejectsDuplicateIdsWithoutRepair() {
+        val record = json.parseToJsonElement(
+            NiaMemorySnapshotBuilder.build(records = listOf(syntheticEntry())),
+        ).jsonObject["records"]!!.jsonArray.single()
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson(
+                JsonArray(listOf(record, record)).toString(),
+            )
+        }
     }
 
     @Test
