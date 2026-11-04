@@ -1,0 +1,40 @@
+name: Build 14 Memory Transfer Verification
+
+on:
+  push:
+    branches:
+      - fix/build14-memory-export-import-safety
+  pull_request:
+    branches:
+      - frankenstai/three-hour-engineering
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  memory-transfer-tests:
+    name: Memory transfer tests and formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant Gradle wrapper permission
+        run: chmod +x ./gradlew
+
+      - name: Run common desktop test suite
+        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+
+      - name: Check Kotlin formatting
+        run: ./gradlew spotlessCheck --no-daemon --stacktrace
