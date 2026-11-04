@@ -63,9 +63,9 @@ object NiaDiagnostics {
 
     private fun redact(input: String): String {
         var safe = input
-        safe = Regex("(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret)(\\\\s*[=:]\\\\s*)[^\\\\s,;]+")
+        safe = Regex("(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret)(\\s*[=:]\\s*)[^\\s,;]+")
             .replace(safe) { match -> "${match.groupValues[1]}${match.groupValues[2]}[REDACTED]" }
-        safe = Regex("(?i)Bearer\\\\s+[A-Za-z0-9._~+/-]+=*").replace(safe, "Bearer [REDACTED]")
+        safe = Regex("(?i)Bearer\\s+[A-Za-z0-9._~+/-]+=*").replace(safe, "Bearer [REDACTED]")
         safe = Regex("(?i)sk-[A-Za-z0-9_-]{12,}").replace(safe, "[REDACTED]")
         return safe
     }
