@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import com.inspiredandroid.kai.permissionQualifier
+import com.inspiredandroid.kai.diagnostics.NiaDiagnostics
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
@@ -77,6 +78,7 @@ actual fun VoiceConversationControl(
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
         var recognizerWorker: Job? = null
         try {
+            NiaDiagnostics.record("INFO", "voice", "session_start", "Starting local voice session.")
             // The first voice session downloads the pinned ~43 MB model into app-private
             // storage. Later sessions reuse the locally checked model files.
             Toast.makeText(
@@ -112,6 +114,13 @@ actual fun VoiceConversationControl(
                     throw cancelled
                 } catch (failure: Exception) {
                     if (recognitionFailureReported.compareAndSet(false, true)) {
+                        NiaDiagnostics.record(
+                            "ERROR",
+                            "voice.recognizer",
+                            "inference",
+                            failure.message ?: "Local speech recognition failed.",
+                            failure::class.qualifiedName,
+                        )
                         scope.launch {
                             latestOnError.value(
                                 failure.message ?: "Local speech recognition failed.",
@@ -128,6 +137,12 @@ actual fun VoiceConversationControl(
                     if (pcmFrames.trySend(samples).isFailure &&
                         recognitionFailureReported.compareAndSet(false, true)
                     ) {
+                        NiaDiagnostics.record(
+                            "ERROR",
+                            "voice.audio",
+                            "recognition_queue_overflow",
+                            "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
+                        )
                         pcmFrames.close(
                             IllegalStateException(
                                 "Speech recognition could not keep up with microphone audio. Please try again.",
@@ -144,10 +159,18 @@ actual fun VoiceConversationControl(
             throw cancelled
         } catch (failure: Exception) {
             val message = failure.message ?: "Could not start local speech recognition."
+            NiaDiagnostics.record(
+                "ERROR",
+                "voice.session",
+                "start_or_runtime",
+                message,
+                failure::class.qualifiedName,
+            )
             latestOnError.value(message)
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             latestOnActiveChange.value(false)
         } finally {
+            NiaDiagnostics.record("INFO", "voice", "session_end", "Voice session stopped.")
             // Stop the microphone thread before releasing the native recogniser it feeds.
             withContext(Dispatchers.IO) {
                 runCatching { audioEngine?.close() }
