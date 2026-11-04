@@ -35,7 +35,7 @@ def rollback(root: Path, generation: str) -> dict[str, str]:
                 previous = json.loads(current_path.read_text(encoding="utf-8")).get("generation")
             temp = root / ".CURRENT.rollback.tmp"
             temp.write_text(json.dumps({"generation": generation}, separators=(",", ":")), encoding="utf-8")
-            with temp.open("rb") as handle:
+            with temp.open("rb+") as handle:
                 os.fsync(handle.fileno())
             os.replace(temp, current_path)
             fd = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
