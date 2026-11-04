@@ -203,6 +203,7 @@ internal fun ExportImportSection(
         OutlinedButton(
             onClick = {
                 importResult = null
+                memoryTransferDiagnostic = null
                 filePickerLauncher?.launch()
             },
             modifier = Modifier.handCursor(),
