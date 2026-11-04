@@ -25,7 +25,7 @@ import kotlin.math.sqrt
  * are enabled only when the device exposes them; availability is not guaranteed.
  */
 internal class NiaAndroidAudioEngine(
-    private val onPcmFrame: (ShortArray, Long) -> Unit,
+    private val onPcmFrame: (ShortArray, Long, Double, Int) -> Unit,
     private val onVoiceActivity: (Boolean, Long) -> Unit,
     private val sampleRate: Int = INPUT_SAMPLE_RATE,
     private val frameSamples: Int = FRAME_SAMPLES,
@@ -132,8 +132,9 @@ internal class NiaAndroidAudioEngine(
                 filled += count
                 if (filled == frame.size) {
                     val samples = frame.copyOf()
-                    updateVoiceActivity(calculateRms(samples))
-                    onPcmFrame(samples, System.nanoTime())
+                    val rms = calculateRms(samples)
+                    updateVoiceActivity(rms)
+                    onPcmFrame(samples, System.nanoTime(), rms, calculatePeak(samples))
                     filled = 0
                 }
             }
@@ -283,6 +284,9 @@ internal class NiaAndroidAudioEngine(
         interruptPlayback()
         stopCapture()
     }
+
+    private fun calculatePeak(samples: ShortArray): Int =
+        samples.maxOfOrNull { kotlin.math.abs(it.toInt()) } ?: 0
 
     private fun calculateRms(samples: ShortArray): Double {
         if (samples.isEmpty()) return 0.0

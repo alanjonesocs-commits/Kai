@@ -33,6 +33,14 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 private const val PCM_QUEUE_CAPACITY = 25
+private const val SLOW_INFERENCE_NANOS = 250_000_000L
+
+private data class QueuedPcmFrame(
+    val samples: ShortArray,
+    val capturedAtNanos: Long,
+    val rms: Double,
+    val peak: Int,
+)
 
 @Composable
 actual fun VoiceConversationControl(
@@ -94,8 +102,17 @@ actual fun VoiceConversationControl(
             val recognizer = withContext(Dispatchers.Default) {
                 NiaSherpaStreamingRecognizer(
                     modelDirectory = modelDirectory,
-                    onPartialTranscript = { /* Retained for future live captions. */ },
+                    onPartialTranscript = { transcript ->
+                        NiaDiagnostics.record(
+                            "INFO", "voice.asr", "partial_transcript",
+                            "text=$transcript",
+                        )
+                    },
                     onFinalTranscript = { transcript ->
+                        NiaDiagnostics.record(
+                            "INFO", "voice.asr", "final_transcript",
+                            "text=$transcript",
+                        )
                         scope.launch {
                             latestOnRecognized.value(transcript)
                         }
@@ -107,25 +124,43 @@ actual fun VoiceConversationControl(
             // Keep native inference off the real-time microphone thread. Sherpa calls
             // must remain serial, so one worker drains this bounded FIFO in order.
             // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
-            val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
+            val pcmFrames = Channel<QueuedPcmFrame>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
             val queuedFrames = AtomicInteger(0)
             val capturedFrames = AtomicLong(0L)
             val processedFrames = AtomicLong(0L)
+            val lastInferenceNanos = AtomicLong(0L)
             val maxInferenceNanos = AtomicLong(0L)
+            val maxQueueDepth = AtomicInteger(0)
+            val maxQueueWaitNanos = AtomicLong(0L)
+            val minFrameRms = java.util.concurrent.atomic.AtomicReference(Double.POSITIVE_INFINITY)
+            val maxFrameRms = java.util.concurrent.atomic.AtomicReference(0.0)
+            val maxFramePeak = AtomicInteger(0)
             recognizerWorker = launch(Dispatchers.Default) {
                 try {
-                    for (samples in pcmFrames) {
+                    for (frame in pcmFrames) {
                         queuedFrames.decrementAndGet()
                         val startedAt = System.nanoTime()
-                        recognizer.acceptPcm16(samples)
-                        val elapsed = System.nanoTime() - startedAt
-                        maxInferenceNanos.updateAndGet { previous -> maxOf(previous, elapsed) }
+                        val queueWaitNanos = (startedAt - frame.capturedAtNanos).coerceAtLeast(0L)
+                        maxQueueWaitNanos.updateAndGet { previous -> maxOf(previous, queueWaitNanos) }
+                        recognizer.acceptPcm16(frame.samples)
+                        val inferenceNanos = (System.nanoTime() - startedAt).coerceAtLeast(0L)
+                        lastInferenceNanos.set(inferenceNanos)
+                        maxInferenceNanos.updateAndGet { previous -> maxOf(previous, inferenceNanos) }
+                        if (inferenceNanos >= SLOW_INFERENCE_NANOS) {
+                            NiaDiagnostics.record(
+                                "WARN", "voice.audio", "recognition_slow_inference",
+                                "inference_ms=${inferenceNanos / 1_000_000} queue_wait_ms=${queueWaitNanos / 1_000_000} queued=${queuedFrames.get()}",
+                            )
+                        }
+                        minFrameRms.updateAndGet { previous -> minOf(previous, frame.rms) }
+                        maxFrameRms.updateAndGet { previous -> maxOf(previous, frame.rms) }
+                        maxFramePeak.updateAndGet { previous -> maxOf(previous, frame.peak) }
                         val processed = processedFrames.incrementAndGet()
                         if (processed % 50L == 0L) {
                             NiaDiagnostics.record(
                                 "INFO", "voice.audio", "recognition_throughput",
-                                "processed=$processed captured=${capturedFrames.get()} queued=${queuedFrames.get()} max_inference_ms=${maxInferenceNanos.get() / 1_000_000}",
+                                "processed=$processed captured=${capturedFrames.get()} queued=${queuedFrames.get()} last_inference_ms=${lastInferenceNanos.get() / 1_000_000} max_inference_ms=${maxInferenceNanos.get() / 1_000_000} max_queue_wait_ms=${maxQueueWaitNanos.get() / 1_000_000} max_queue_depth=${maxQueueDepth.get()} frame_rms_min=${minFrameRms.get()} frame_rms_max=${maxFrameRms.get()} frame_peak_max=${maxFramePeak.get()}",
                             )
                         }
                     }
@@ -149,30 +184,38 @@ actual fun VoiceConversationControl(
                 }
             }
             val engine = NiaAndroidAudioEngine(
-                onPcmFrame = { samples, _ ->
+                onPcmFrame = { samples, capturedAtNanos, rms, peak ->
                     // Never wait for inference here. A full queue ends the session
                     // visibly rather than silently dropping speech frames.
                     capturedFrames.incrementAndGet()
-                    queuedFrames.incrementAndGet()
-                    if (pcmFrames.trySend(samples).isFailure) {
+                    val queueDepth = queuedFrames.incrementAndGet()
+                    maxQueueDepth.updateAndGet { previous -> maxOf(previous, queueDepth) }
+                    val sendResult = pcmFrames.trySend(QueuedPcmFrame(samples, capturedAtNanos, rms, peak))
+                    if (sendResult.isFailure) {
                         queuedFrames.decrementAndGet()
                         if (recognitionFailureReported.compareAndSet(false, true)) {
-                        NiaDiagnostics.record(
-                            "ERROR",
-                            "voice.audio",
-                            "recognition_queue_overflow",
-                            "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
-                        )
-                        pcmFrames.close(
-                            IllegalStateException(
-                                "Speech recognition could not keep up with microphone audio. Please try again.",
-                            ),
-                        )
-                        scope.launch {
-                            withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
-                            latestOnError.value("Speech recognition could not keep up with microphone audio. Please try again.")
-                            latestOnActiveChange.value(false)
-                        }
+                            val failureCode = if (sendResult.isClosed) "recognition_channel_closed" else "recognition_queue_overflow"
+                            val failureMessage = if (sendResult.isClosed) {
+                                "Audio frame rejected because the recognizer channel was already closed; this is not evidence of a full queue."
+                            } else {
+                                "Speech recognizer queue reached capacity; session stopped to avoid silent audio loss."
+                            }
+                            NiaDiagnostics.record(
+                                "ERROR",
+                                "voice.audio",
+                                failureCode,
+                                "$failureMessage queued=${queuedFrames.get()} captured=${capturedFrames.get()} processed=${processedFrames.get()}",
+                            )
+                            pcmFrames.close(
+                                IllegalStateException(
+                                    if (sendResult.isClosed) "Speech recognition stopped unexpectedly because its processing channel closed." else "Speech recognition could not keep up with microphone audio. Please try again.",
+                                ),
+                            )
+                            scope.launch {
+                                withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
+                                latestOnError.value(if (sendResult.isClosed) "Speech recognition stopped unexpectedly because its processing channel closed." else "Speech recognition could not keep up with microphone audio. Please try again.")
+                                latestOnActiveChange.value(false)
+                            }
                         }
                     }
                 },
