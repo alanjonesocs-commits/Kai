@@ -51,6 +51,32 @@ class Nia15MemoryLabTest {
     }
 
     @Test
+    fun `chat retrieval includes approved synthetic records only and preserves evidence labels`() {
+        val records = Nia15LabMemoryData.seed().mapIndexed { index, memory ->
+            when (index) {
+                0 -> memory.copy(captureDecision = "APPROVED")
+                1 -> memory.copy(captureDecision = "REJECTED")
+                else -> memory
+            }
+        }
+        val context = Nia15LabMemoryData.approvedPromptContext(Nia15LabMemoryData.encode(records))
+
+        assertTrue(context!!.contains("Fictional test user reported that the workspace is Room A."))
+        assertTrue(!context.contains("Fictional test user later reported that the workspace is Room B."))
+        assertTrue(!context.contains("wooden desk"))
+        assertTrue(context.contains("claim: REPORTED"))
+        assertTrue(context.contains("actual fact: UNKNOWN"))
+        assertTrue(context.contains("resolution: NEEDS_VERIFICATION"))
+        assertTrue(context.contains("synthetic-session-001"))
+    }
+
+    @Test
+    fun `chat retrieval is empty when no synthetic records are approved`() {
+        val records = Nia15LabMemoryData.seed()
+        assertEquals(null, Nia15LabMemoryData.approvedPromptContext(Nia15LabMemoryData.encode(records)))
+    }
+
+    @Test
     fun `duplicate synthetic IDs are rejected`() {
         val memories = Nia15LabMemoryData.seed()
         val duplicate = memories + memories.first()
