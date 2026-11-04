@@ -59,9 +59,9 @@ class Nia15MemoryLabTest {
                 else -> memory
             }
         }
-        val context = Nia15LabMemoryData.approvedPromptContext(Nia15LabMemoryData.encode(records))
+        val context = checkNotNull(Nia15LabMemoryData.approvedPromptContext(Nia15LabMemoryData.encode(records)))
 
-        assertTrue(context!!.contains("Fictional test user reported that the workspace is Room A."))
+        assertTrue(context.contains("Fictional test user reported that the workspace is Room A."))
         assertTrue(!context.contains("Fictional test user later reported that the workspace is Room B."))
         assertTrue(!context.contains("wooden desk"))
         assertTrue(context.contains("claim: REPORTED"))
