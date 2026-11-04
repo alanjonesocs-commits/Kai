@@ -1,0 +1,126 @@
+{
+  "format": "nia-memory-snapshot",
+  "schema_version": "1.0.0",
+  "snapshot_id": "snap-synthetic-000001",
+  "created_at_epoch_ms": 1793770800000,
+  "source_generation": 1,
+  "source": {
+    "system": "NIA15-SYNTHETIC",
+    "device_role": "test_fixture"
+  },
+  "record_count": 5,
+  "hash_algorithm": "SHA-256",
+  "records_hash": "8f1737efc3229fefb61e5e658e1216c41c1d261370e5934fcfac823e8646919b",
+  "records": [
+    {
+      "key": "notebook.preference",
+      "content": "Fictional test user prefers green notebooks.",
+      "createdAt": 1793529000000,
+      "updatedAt": 1793529000000,
+      "category": "PREFERENCE",
+      "hitCount": 1,
+      "source": "synthetic_test",
+      "id": "mem-syn-001",
+      "receiptStatus": "CONFIRMED",
+      "claimStatus": "REPORTED",
+      "factStatus": "UNKNOWN",
+      "resolutionStatus": "UNKNOWN",
+      "sourceConversationId": "synthetic-conversation-001",
+      "provenance": [
+        {
+          "source": "synthetic_test",
+          "conversationId": "synthetic-conversation-001",
+          "observedAt": 1793529000000
+        }
+      ]
+    },
+    {
+      "key": "workspace.preference",
+      "content": "Fictional test user said their preferred workspace is Room A.",
+      "createdAt": 1793610000000,
+      "updatedAt": 1793610000000,
+      "category": "GENERAL",
+      "hitCount": 1,
+      "source": "synthetic_test",
+      "id": "mem-syn-002",
+      "receiptStatus": "CONFIRMED",
+      "claimStatus": "REPORTED",
+      "factStatus": "UNKNOWN",
+      "resolutionStatus": "NEEDS_VERIFICATION",
+      "sourceConversationId": "synthetic-conversation-002",
+      "provenance": [
+        {
+          "source": "synthetic_test",
+          "conversationId": "synthetic-conversation-002",
+          "observedAt": 1793610000000
+        }
+      ]
+    },
+    {
+      "key": "workspace.preference",
+      "content": "Fictional test user later said their preferred workspace is Room B.",
+      "createdAt": 1793696400000,
+      "updatedAt": 1793696400000,
+      "category": "GENERAL",
+      "hitCount": 1,
+      "source": "synthetic_test",
+      "id": "mem-syn-003",
+      "receiptStatus": "CONFIRMED",
+      "claimStatus": "REPORTED",
+      "factStatus": "UNKNOWN",
+      "resolutionStatus": "NEEDS_VERIFICATION",
+      "sourceConversationId": "synthetic-conversation-003",
+      "provenance": [
+        {
+          "source": "synthetic_test",
+          "conversationId": "synthetic-conversation-003",
+          "observedAt": 1793696400000
+        }
+      ]
+    },
+    {
+      "key": "workspace.current_status",
+      "content": "Fictional test user's current preferred workspace has not been established.",
+      "createdAt": 1793700000000,
+      "updatedAt": 1793700000000,
+      "category": "GENERAL",
+      "hitCount": 1,
+      "source": "synthetic_test",
+      "id": "mem-syn-004",
+      "receiptStatus": "CONFIRMED",
+      "claimStatus": "UNKNOWN",
+      "factStatus": "UNKNOWN",
+      "resolutionStatus": "NEEDS_VERIFICATION",
+      "sourceConversationId": "synthetic-conversation-004",
+      "provenance": [
+        {
+          "source": "synthetic_test",
+          "conversationId": "synthetic-conversation-004",
+          "observedAt": 1793700000000
+        }
+      ]
+    },
+    {
+      "key": "workspace.change_hint",
+      "content": "A fictional note suggests a possible change to the user's workspace preference.",
+      "createdAt": 1793770500000,
+      "updatedAt": 1793770500000,
+      "category": "LEARNING",
+      "hitCount": 1,
+      "source": "synthetic_test",
+      "id": "mem-syn-005",
+      "receiptStatus": "CONFIRMED",
+      "claimStatus": "ASSUMED",
+      "factStatus": "UNKNOWN",
+      "resolutionStatus": "NEEDS_VERIFICATION",
+      "sourceConversationId": "synthetic-conversation-005",
+      "provenance": [
+        {
+          "source": "synthetic_test",
+          "conversationId": "synthetic-conversation-005",
+          "observedAt": 1793770500000
+        }
+      ]
+    }
+  ]
+}

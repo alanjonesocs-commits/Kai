@@ -1,0 +1,65 @@
+name: NIA15 Synthetic Memory Indexer
+
+on:
+  push:
+    branches:
+      - feature/nia15-memory-retrieval-pipeline
+    paths:
+      - "tools/nia-memory-indexer/**"
+      - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/build.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - ".github/workflows/nia15-memory-indexer.yml"
+  pull_request:
+    paths:
+      - "tools/nia-memory-indexer/**"
+      - ".github/workflows/nia15-memory-indexer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-indexer-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify SQLite FTS5
+        run: |
+          python - <<'PY'
+          import sqlite3
+          db = sqlite3.connect(":memory:")
+          db.execute("CREATE VIRTUAL TABLE fts_probe USING fts5(content)")
+          print("SQLite FTS5 available:", sqlite3.sqlite_version)
+          PY
+
+      - name: Run synthetic-only unit and integration tests
+        working-directory: tools/nia-memory-indexer
+        run: python -m unittest -v
+
+  android-snapshot-hash-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify Android snapshot encoder against shared fixture
+        run: ./gradlew :composeApp:testAndroidHostTest
