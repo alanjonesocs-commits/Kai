@@ -458,6 +458,8 @@ class SherpaSpikeActivity : Activity() {
                 val report = buildString {
                     appendLine("Model: ${model.label}")
                     appendLine("Model ID: ${model.id}")
+                    appendLine("Model repository: ${model.repository}")
+                    appendLine("Model revision: ${model.revision}")
                     appendLine("WAV: ${inputWav.name}")
                     appendLine("WAV SHA-256: ${sha256(inputWav)}")
                     appendLine("Encoder SHA-256: ${sha256(encoder)}")
