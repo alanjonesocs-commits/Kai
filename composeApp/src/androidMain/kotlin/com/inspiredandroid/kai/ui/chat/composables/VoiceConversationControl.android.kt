@@ -21,6 +21,8 @@ import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
@@ -94,22 +96,40 @@ actual fun VoiceConversationControl(
             }
             streamingRecognizer = recognizer
 
+            // Keep native inference off the real-time microphone thread. Sherpa calls
+            // must remain serial, so one worker drains this bounded FIFO in order.
+            // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
+            val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
+            val recognizerWorker = launch(Dispatchers.Default) {
+                try {
+                    for (samples in pcmFrames) {
+                        recognizer.acceptPcm16(samples)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    if (recognitionFailureReported.compareAndSet(false, true)) {
+                        latestOnError.value(
+                            failure.message ?: "Local speech recognition failed.",
+                        )
+                        latestOnActiveChange.value(false)
+                    }
+                }
+            }
             val engine = NiaAndroidAudioEngine(
                 onPcmFrame = { samples, _ ->
-                    runCatching { recognizer.acceptPcm16(samples) }
-                        .onFailure { failure ->
-                            // Audio callbacks run every 20 ms. Report a native/runtime
-                            // failure once, then end the session instead of flooding UI.
-                            if (recognitionFailureReported.compareAndSet(false, true)) {
-                                scope.launch {
-                                    latestOnError.value(
-                                        failure.message ?: "Local speech recognition failed.",
-                                    )
-                                    latestOnActiveChange.value(false)
-                                }
-                            }
-                        }
+                    // Never wait for inference here. A full queue ends the session
+                    // visibly rather than silently dropping speech frames.
+                    if (pcmFrames.trySend(samples).isFailure &&
+                        recognitionFailureReported.compareAndSet(false, true)
+                    ) {
+                        pcmFrames.close(
+                            IllegalStateException(
+                                "Speech recognition could not keep up with microphone audio. Please try again.",
+                            ),
+                        )
+                    }
                 },
                 onVoiceActivity = { _, _ -> },
             )
@@ -127,8 +147,17 @@ actual fun VoiceConversationControl(
             // Stop the microphone thread before releasing the native recogniser it feeds.
             withContext(Dispatchers.IO) {
                 runCatching { audioEngine?.close() }
+            }
+            // Stop the worker before releasing the native recogniser it owns.
+            // Cancellation also prevents a slow decode from delaying session teardown.
+            // The worker is cancelled automatically with this LaunchedEffect.
+            withContext(Dispatchers.IO) {
                 runCatching { streamingRecognizer?.close() }
             }
         }
+    }
+
+    private companion object {
+        const val PCM_QUEUE_CAPACITY = 25
     }
 }
