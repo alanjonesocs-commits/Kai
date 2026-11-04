@@ -33,6 +33,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 private const val PCM_QUEUE_CAPACITY = 25
+private const val SLOW_INFERENCE_NANOS = 250_000_000L
+
+private data class QueuedPcmFrame(
+    val samples: ShortArray,
+    val capturedAtNanos: Long,
+)
 
 @Composable
 actual fun VoiceConversationControl(
@@ -107,25 +113,37 @@ actual fun VoiceConversationControl(
             // Keep native inference off the real-time microphone thread. Sherpa calls
             // must remain serial, so one worker drains this bounded FIFO in order.
             // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
-            val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
+            val pcmFrames = Channel<QueuedPcmFrame>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
             val queuedFrames = AtomicInteger(0)
             val capturedFrames = AtomicLong(0L)
             val processedFrames = AtomicLong(0L)
+            val lastInferenceNanos = AtomicLong(0L)
             val maxInferenceNanos = AtomicLong(0L)
+            val maxQueueDepth = AtomicInteger(0)
+            val maxQueueWaitNanos = AtomicLong(0L)
             recognizerWorker = launch(Dispatchers.Default) {
                 try {
-                    for (samples in pcmFrames) {
+                    for (frame in pcmFrames) {
                         queuedFrames.decrementAndGet()
                         val startedAt = System.nanoTime()
-                        recognizer.acceptPcm16(samples)
-                        val elapsed = System.nanoTime() - startedAt
-                        maxInferenceNanos.updateAndGet { previous -> maxOf(previous, elapsed) }
+                        val queueWaitNanos = (startedAt - frame.capturedAtNanos).coerceAtLeast(0L)
+                        maxQueueWaitNanos.updateAndGet { previous -> maxOf(previous, queueWaitNanos) }
+                        recognizer.acceptPcm16(frame.samples)
+                        val inferenceNanos = (System.nanoTime() - startedAt).coerceAtLeast(0L)
+                        lastInferenceNanos.set(inferenceNanos)
+                        maxInferenceNanos.updateAndGet { previous -> maxOf(previous, inferenceNanos) }
+                        if (inferenceNanos >= SLOW_INFERENCE_NANOS) {
+                            NiaDiagnostics.record(
+                                "WARN", "voice.audio", "recognition_slow_inference",
+                                "inference_ms=${inferenceNanos / 1_000_000} queue_wait_ms=${queueWaitNanos / 1_000_000} queued=${queuedFrames.get()}",
+                            )
+                        }
                         val processed = processedFrames.incrementAndGet()
                         if (processed % 50L == 0L) {
                             NiaDiagnostics.record(
                                 "INFO", "voice.audio", "recognition_throughput",
-                                "processed=$processed captured=${capturedFrames.get()} queued=${queuedFrames.get()} max_inference_ms=${maxInferenceNanos.get() / 1_000_000}",
+                                "processed=$processed captured=${capturedFrames.get()} queued=${queuedFrames.get()} last_inference_ms=${lastInferenceNanos.get() / 1_000_000} max_inference_ms=${maxInferenceNanos.get() / 1_000_000} max_queue_wait_ms=${maxQueueWaitNanos.get() / 1_000_000} max_queue_depth=${maxQueueDepth.get()}",
                             )
                         }
                     }
@@ -153,8 +171,9 @@ actual fun VoiceConversationControl(
                     // Never wait for inference here. A full queue ends the session
                     // visibly rather than silently dropping speech frames.
                     capturedFrames.incrementAndGet()
-                    queuedFrames.incrementAndGet()
-                    if (pcmFrames.trySend(samples).isFailure) {
+                    val queueDepth = queuedFrames.incrementAndGet()
+                    maxQueueDepth.updateAndGet { previous -> maxOf(previous, queueDepth) }
+                    if (pcmFrames.trySend(QueuedPcmFrame(samples, System.nanoTime())).isFailure) {
                         queuedFrames.decrementAndGet()
                         if (recognitionFailureReported.compareAndSet(false, true)) {
                         NiaDiagnostics.record(
