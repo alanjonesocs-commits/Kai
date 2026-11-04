@@ -111,6 +111,7 @@ fun QuestionInput(
     assistantReplyText: String? = null,
     hasError: Boolean = false,
     textToSpeech: TextToSpeechInstance? = null,
+    onVoiceConversationActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var voiceConversationActive by remember { mutableStateOf(false) }
@@ -120,7 +121,7 @@ fun QuestionInput(
     var wasVoiceConversationActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(voiceConversationActive) {
-        if (!voiceConversationActive && wasVoiceConversationActive) {
+        if (voiceConversationActive != wasVoiceConversationActive) {
             withContext(getBackgroundDispatcher()) { textToSpeech?.stop() }
         }
         wasVoiceConversationActive = voiceConversationActive
@@ -316,6 +317,7 @@ fun QuestionInput(
                                 !speakingVoiceReply,
                             onActiveChange = { active ->
                                 voiceConversationActive = active
+                                onVoiceConversationActiveChange(active)
                                 if (active) {
                                     lastVoiceReplyId = assistantReplyId
                                     awaitingVoiceReply = false
