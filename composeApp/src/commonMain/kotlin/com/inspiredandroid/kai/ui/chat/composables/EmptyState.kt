@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.inspiredandroid.kai.ui.components.LogoAnimation
+import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
 import com.inspiredandroid.kai.ui.handCursor
 import kai.composeapp.generated.resources.Res
@@ -65,7 +65,7 @@ internal fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LogoAnimation()
+        HolographicBrain()
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(Res.string.welcome_message),
