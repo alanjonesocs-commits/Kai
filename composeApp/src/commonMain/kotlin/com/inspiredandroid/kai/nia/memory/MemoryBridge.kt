@@ -195,14 +195,16 @@ fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
     require(live.map { it.id }.distinct().size == live.size) {
         "Memory bundle contains duplicate episode ids"
     }
+    val restoredEntries = live.associateWith { it.toMemoryEntry(bundle.manifest.createdAt) }
     val newMemory = JsonArray(
         live.map { ep ->
+            val restored = checkNotNull(restoredEntries[ep])
             buildJsonObject {
                 put("key", ep.key)
                 put("id", ep.id.removePrefix(ID_PREFIX))
                 put("content", ep.content)
-                put("createdAt", isoToMillis(ep.timestamp))
-                put("updatedAt", isoToMillis(ep.updatedAt ?: ep.timestamp))
+                put("createdAt", restored.createdAt)
+                put("updatedAt", restored.updatedAt)
                 ep.category?.let { put("category", it) }
                 put("hitCount", ep.hitCount)
                 ep.source?.let { put("source", it) }
@@ -214,7 +216,9 @@ fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
                 if (ep.provenance.isNotEmpty()) {
                     put("provenance", kaiJson.encodeToJsonElement(ep.provenance))
                 }
-                ep.extra.forEach { (k, v) -> put(k, v) }
+                ep.extra
+                    .filterKeys { it != "createdAt" && it != "updatedAt" }
+                    .forEach { (k, v) -> put(k, v) }
             }
         },
     )
