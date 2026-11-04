@@ -241,6 +241,17 @@ class AppSettingsTest {
     }
     
     @Test
+    fun `NIA15 synthetic lab storage is separate from canonical memories`() {
+        val appSettings = AppSettings(MapSettings())
+
+        appSettings.setMemoriesJson("[{\"id\":\"canonical-only\"}]")
+        appSettings.setNia15LabMemoriesJson("[{\"id\":\"synthetic-only\"}]")
+
+        assertEquals("[{\"id\":\"canonical-only\"}]", appSettings.getMemoriesJson())
+        assertEquals("[{\"id\":\"synthetic-only\"}]", appSettings.getNia15LabMemoriesJsonOrNull())
+    }
+
+    @Test
     fun `raw memory getter distinguishes missing store from stored empty array`() {
         val settings = MapSettings()
         val appSettings = AppSettings(settings)

@@ -32,6 +32,7 @@ fun CommandCentreScreen(
     onOpenSkills: () -> Unit,
     onOpenProjects: () -> Unit,
     onOpenBrainMonitor: () -> Unit,
+    onOpenMemoryLab: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -62,6 +63,11 @@ fun CommandCentreScreen(
             onClick = onOpenBrainMonitor,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Brain monitor & memory") }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onOpenMemoryLab,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("NIA15 synthetic memory lab") }
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = onOpenChat,
