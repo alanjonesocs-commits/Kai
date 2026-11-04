@@ -60,11 +60,15 @@ internal object NiaMemorySnapshotBuilder {
         appSettings: AppSettings,
         snapshotId: String = UUID.randomUUID().toString(),
         createdAtEpochMs: Long = System.currentTimeMillis(),
-    ): String = buildFromRawJson(
-        rawMemoryJson = appSettings.getMemoriesJson(),
-        snapshotId = snapshotId,
-        createdAtEpochMs = createdAtEpochMs,
-    )
+    ): String {
+        val rawMemoryJson = appSettings.getMemoriesJsonOrNull()
+            ?: throw IllegalStateException("Canonical memory store is missing; snapshot refused")
+        return buildFromRawJson(
+            rawMemoryJson = rawMemoryJson,
+            snapshotId = snapshotId,
+            createdAtEpochMs = createdAtEpochMs,
+        )
+    }
 
     /**
      * Build from the exact stored JSON array without routing through MemoryStore.
