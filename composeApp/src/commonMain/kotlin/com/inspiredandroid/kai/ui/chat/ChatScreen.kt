@@ -504,6 +504,7 @@ private fun ChatModeScreen(
 ) {
     var showHistorySheet by remember { mutableStateOf(false) }
     var isSandboxOpen by rememberSaveable { mutableStateOf(initialSandboxOpen) }
+    var isVoiceConversationActive by remember { mutableStateOf(false) }
     // Hoisted here so the draft survives toggling the sandbox/terminal view, which
     // removes QuestionInput from composition and would otherwise drop the text.
     var questionInputText by rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -677,7 +678,7 @@ private fun ChatModeScreen(
                                 if (history.isNotEmpty()) {
                                     listState.requestScrollToItem(history.lastIndex)
                                     val lastMessage = history.last()
-                                    if (uiState.isSpeechOutputEnabled && lastMessage.role == History.Role.ASSISTANT) {
+                                    if (!isVoiceConversationActive && uiState.isSpeechOutputEnabled && lastMessage.role == History.Role.ASSISTANT) {
                                         componentScope.launch(getBackgroundDispatcher()) {
                                             textToSpeech?.stop()
                                             uiState.actions.setIsSpeaking(true, lastMessage.id)
@@ -959,6 +960,12 @@ private fun ChatModeScreen(
                     availableServices = uiState.availableServices,
                     onSelectService = uiState.actions.selectService,
                     installedSkills = uiState.installedSkills,
+                    voiceConversationAvailable = true,
+                    assistantReplyId = uiState.history.lastRenderedAssistant()?.id,
+                    assistantReplyText = uiState.history.lastRenderedAssistant()?.content,
+                    hasError = uiState.error != null,
+                    textToSpeech = textToSpeech,
+                    onVoiceConversationActiveChange = { isVoiceConversationActive = it },
                 )
             }
         }
