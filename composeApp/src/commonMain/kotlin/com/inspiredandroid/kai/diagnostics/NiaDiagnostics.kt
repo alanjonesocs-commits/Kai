@@ -63,17 +63,10 @@ object NiaDiagnostics {
 
     private fun redact(input: String): String {
         var safe = input
-        val patterns = listOf(
-            Regex("(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret)(\\s*[=:]\\s*)[^\\s,;]+"),
-            Regex("(?i)Bearer\\s+[A-Za-z0-9._~+/-]+=*"),
-            Regex("(?i)sk-[A-Za-z0-9_-]{12,}"),
-        )
-        patterns.forEach { pattern ->
-            safe = pattern.replace(safe) { match ->
-                val prefix = match.value.substringBefore(Regex("[=:]\\s*").find(match.value)?.value ?: "\u0000")
-                if (prefix == match.value) "[REDACTED]" else "$prefix=[REDACTED]"
-            }
-        }
+        safe = Regex("(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret)(\\\\s*[=:]\\\\s*)[^\\\\s,;]+")
+            .replace(safe) { match -> "${match.groupValues[1]}${match.groupValues[2]}[REDACTED]" }
+        safe = Regex("(?i)Bearer\\\\s+[A-Za-z0-9._~+/-]+=*").replace(safe, "Bearer [REDACTED]")
+        safe = Regex("(?i)sk-[A-Za-z0-9_-]{12,}").replace(safe, "[REDACTED]")
         return safe
     }
 
