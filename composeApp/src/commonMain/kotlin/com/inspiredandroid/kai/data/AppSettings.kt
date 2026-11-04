@@ -281,6 +281,13 @@ class AppSettings(internal val settings: Settings) {
         settings.putString(KEY_AGENT_MEMORIES, json)
     }
 
+    // NIA15 experiment only: deliberately separate from canonical agent memories.
+    fun getNia15LabMemoriesJsonOrNull(): String? = settings.getStringOrNull(KEY_NIA15_LAB_MEMORIES)
+
+    fun setNia15LabMemoriesJson(json: String) {
+        settings.putString(KEY_NIA15_LAB_MEMORIES, json)
+    }
+
     // Scheduling
     fun isSchedulingEnabled(): Boolean = settings.getBoolean(KEY_SCHEDULING_ENABLED, true)
 
@@ -576,6 +583,7 @@ class AppSettings(internal val settings: Settings) {
         const val KEY_MEMORY_ENABLED = "memory_enabled"
         const val KEY_MEMORY_INSTRUCTIONS = "memory_instructions"
         const val KEY_AGENT_MEMORIES = "agent_memories"
+        const val KEY_NIA15_LAB_MEMORIES = "nia15_synthetic_lab_memories_v1"
         const val KEY_CORRUPT_JSON_BACKUP_PREFIX = "corrupt_json_backup."
         const val KEY_SCHEDULED_TASKS = "scheduled_tasks"
         const val KEY_SCHEDULING_ENABLED = "scheduling_enabled"
