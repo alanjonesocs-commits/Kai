@@ -9,7 +9,9 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.SystemClock
 import android.view.ViewGroup
 import android.widget.Button
@@ -473,6 +475,7 @@ class SherpaSpikeActivity : Activity() {
                     appendLine("Decode wall time: ${finishedAt - startedAt} ms")
                     appendLine("Battery: ${batteryBefore.first}% -> ${batteryAfter.first}%")
                     appendLine("Battery temperature: ${batteryBefore.second} C -> ${batteryAfter.second} C")
+                    appendLine("Android thermal status: ${thermalStatus()}")
                     appendLine()
                     appendLine("TRANSCRIPT")
                     appendLine(transcript)
@@ -498,6 +501,21 @@ class SherpaSpikeActivity : Activity() {
         val percent = if (level >= 0 && scale > 0) level * 100 / scale else -1
         val temperature = (battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1) / 10f
         return percent to temperature
+    }
+
+    private fun thermalStatus(): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return "not available on this Android version"
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        return when (powerManager.currentThermalStatus) {
+            PowerManager.THERMAL_STATUS_NONE -> "none"
+            PowerManager.THERMAL_STATUS_LIGHT -> "light"
+            PowerManager.THERMAL_STATUS_MODERATE -> "moderate"
+            PowerManager.THERMAL_STATUS_SEVERE -> "severe"
+            PowerManager.THERMAL_STATUS_CRITICAL -> "critical"
+            PowerManager.THERMAL_STATUS_EMERGENCY -> "emergency"
+            PowerManager.THERMAL_STATUS_SHUTDOWN -> "shutdown"
+            else -> "unknown"
+        }
     }
 
     private fun showLocalFiles() {
