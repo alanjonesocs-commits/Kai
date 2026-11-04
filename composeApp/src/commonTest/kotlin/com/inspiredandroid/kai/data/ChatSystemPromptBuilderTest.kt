@@ -68,6 +68,7 @@ class ChatSystemPromptBuilderTest {
         emailAccounts: List<EmailAccountSummary> = emptyList(),
         uiMode: ChatPromptUiMode = ChatPromptUiMode.NONE,
         activeSkill: com.inspiredandroid.kai.skills.SkillManifest? = null,
+        nia15LabMemoryContext: String? = null,
     ) = buildChatSystemPrompt(
         variant = variant,
         soul = soul,
@@ -85,6 +86,7 @@ class ChatSystemPromptBuilderTest {
         runtime = runtime,
         uiMode = uiMode,
         activeSkill = activeSkill,
+        nia15LabMemoryContext = nia15LabMemoryContext,
     )
 
     private fun skill(
@@ -254,6 +256,22 @@ class ChatSystemPromptBuilderTest {
         assertTrue("Use a concise writing style." in customizedSoul)
         assertTrue(DEFAULT_NIA_IDENTITY_SECTION in customizedSoul)
         assertTrue("Do not claim access to past conversations or memories" in customizedSoul)
+    }
+
+    @Test
+    fun `synthetic lab context is clearly labelled and preserves evidence status`() {
+        val out = build(
+            variant = SystemPromptVariant.CHAT_REMOTE,
+            nia15LabMemoryContext = "- **workspace_room** [receipt: CONFIRMED; claim: REPORTED; actual fact: UNKNOWN; resolution: NEEDS_VERIFICATION]\\n  Fictional test claim: Room A.",
+        )
+
+        assertTrue("## NIA15 Synthetic Memory Lab — TEST DATA ONLY" in out)
+        assertTrue("not facts about the user" in out)
+        assertTrue("Do not save, edit, delete, or merge these records into canonical memory." in out)
+        assertTrue("claim: REPORTED" in out)
+        assertTrue("actual fact: UNKNOWN" in out)
+        assertTrue("resolution: NEEDS_VERIFICATION" in out)
+        assertTrue("Fictional test claim: Room A." in out)
     }
 
     @Test
