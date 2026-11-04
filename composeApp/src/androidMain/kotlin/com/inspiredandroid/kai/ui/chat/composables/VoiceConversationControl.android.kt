@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 private const val PCM_QUEUE_CAPACITY = 25
 
@@ -107,27 +109,40 @@ actual fun VoiceConversationControl(
             // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
             val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
+            val queuedFrames = AtomicInteger(0)
+            val capturedFrames = AtomicLong(0L)
+            val processedFrames = AtomicLong(0L)
+            val maxInferenceNanos = AtomicLong(0L)
             recognizerWorker = launch(Dispatchers.Default) {
                 try {
                     for (samples in pcmFrames) {
+                        queuedFrames.decrementAndGet()
+                        val startedAt = System.nanoTime()
                         recognizer.acceptPcm16(samples)
+                        val elapsed = System.nanoTime() - startedAt
+                        maxInferenceNanos.updateAndGet { previous -> maxOf(previous, elapsed) }
+                        val processed = processedFrames.incrementAndGet()
+                        if (processed % 50L == 0L) {
+                            NiaDiagnostics.record(
+                                "INFO", "voice.audio", "recognition_throughput",
+                                "processed=$processed captured=${capturedFrames.get()} queued=${queuedFrames.get()} max_inference_ms=${maxInferenceNanos.get() / 1_000_000}",
+                            )
+                        }
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
                     if (recognitionFailureReported.compareAndSet(false, true)) {
+                        pcmFrames.close(failure)
                         NiaDiagnostics.record(
-                            "ERROR",
-                            "voice.recognizer",
-                            "inference",
+                            "ERROR", "voice.recognizer", "inference",
                             failure.message ?: "Local speech recognition failed.",
                             failure::class.qualifiedName,
                             stackTrace = failure.stackTraceToString(),
                         )
                         scope.launch {
-                            latestOnError.value(
-                                failure.message ?: "Local speech recognition failed.",
-                            )
+                            withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
+                            latestOnError.value(failure.message ?: "Local speech recognition failed.")
                             latestOnActiveChange.value(false)
                         }
                     }
@@ -137,9 +152,11 @@ actual fun VoiceConversationControl(
                 onPcmFrame = { samples, _ ->
                     // Never wait for inference here. A full queue ends the session
                     // visibly rather than silently dropping speech frames.
-                    if (pcmFrames.trySend(samples).isFailure &&
-                        recognitionFailureReported.compareAndSet(false, true)
-                    ) {
+                    capturedFrames.incrementAndGet()
+                    queuedFrames.incrementAndGet()
+                    if (pcmFrames.trySend(samples).isFailure) {
+                        queuedFrames.decrementAndGet()
+                        if (recognitionFailureReported.compareAndSet(false, true)) {
                         NiaDiagnostics.record(
                             "ERROR",
                             "voice.audio",
@@ -151,6 +168,12 @@ actual fun VoiceConversationControl(
                                 "Speech recognition could not keep up with microphone audio. Please try again.",
                             ),
                         )
+                        scope.launch {
+                            withContext(Dispatchers.IO) { audioEngine?.stopCapture() }
+                            latestOnError.value("Speech recognition could not keep up with microphone audio. Please try again.")
+                            latestOnActiveChange.value(false)
+                        }
+                        }
                     }
                 },
                 onVoiceActivity = { _, _ -> },
