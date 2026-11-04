@@ -1,9 +1,6 @@
 name: Nia Live Voice Verification
 
 on:
-  push:
-    branches:
-      - feature/nia-live-voice-conversation
   pull_request:
     branches:
       - frankenstai/three-hour-engineering
