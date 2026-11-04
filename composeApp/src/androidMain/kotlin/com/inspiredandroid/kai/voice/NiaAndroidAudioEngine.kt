@@ -6,8 +6,8 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
-import android.media.audiofx.NoiseSuppressor
 import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import android.os.Process
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
@@ -50,11 +50,13 @@ internal class NiaAndroidAudioEngine(
             check(sampleRate == INPUT_SAMPLE_RATE && frameSamples > 0) {
                 "Unsupported capture format."
             }
-            check(AudioRecord.getMinBufferSize(
-                sampleRate,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-            ) > 0) { "16 kHz microphone capture is unavailable." }
+            check(
+                AudioRecord.getMinBufferSize(
+                    sampleRate,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                ) > 0,
+            ) { "16 kHz microphone capture is unavailable." }
 
             val minBuffer = AudioRecord.getMinBufferSize(
                 sampleRate,

@@ -23,7 +23,8 @@ import kotlin.math.abs
 fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
     val transition = rememberInfiniteTransition()
     val pulse by transition.animateFloat(
-        0f, 1f,
+        0f,
+        1f,
         infiniteRepeatable(tween(2800, easing = FastOutSlowInEasing), RepeatMode.Restart),
     )
     Canvas(modifier.size(size)) {
@@ -34,10 +35,14 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
         val violet = Color(0xFFB49AFF)
 
         // Holographic scan rings.
-        for (i in 0..2) drawCircle(
-            cyan.copy(alpha = 0.09f - i * 0.02f),
-            s * (0.34f + i * 0.055f), c, style = Stroke(s * 0.003f),
-        )
+        for (i in 0..2) {
+            drawCircle(
+                cyan.copy(alpha = 0.09f - i * 0.02f),
+                s * (0.34f + i * 0.055f),
+                c,
+                style = Stroke(s * 0.003f),
+            )
+        }
 
         // Twin hemispheres form a stylised anatomical silhouette.
         val left = Path().apply {
@@ -77,10 +82,13 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
             0.24f to -0.12f, 0.13f to -0.20f, 0.27f to 0.02f,
             0.14f to 0.10f, 0.20f to 0.18f, 0.04f to -0.08f,
         )
-        val links = listOf(0 to 1, 0 to 2, 1 to 5, 2 to 3, 3 to 4, 5 to 3,
-            6 to 7, 6 to 8, 7 to 11, 8 to 9, 9 to 10, 11 to 9, 5 to 11)
+        val links = listOf(
+            0 to 1, 0 to 2, 1 to 5, 2 to 3, 3 to 4, 5 to 3,
+            6 to 7, 6 to 8, 7 to 11, 8 to 9, 9 to 10, 11 to 9, 5 to 11,
+        )
         links.forEach { (a, b) ->
-            val p = nodes[a]; val q = nodes[b]
+            val p = nodes[a]
+            val q = nodes[b]
             drawLine(
                 cyan.copy(alpha = 0.24f),
                 Offset(c.x + p.first * s, c.y + p.second * s),

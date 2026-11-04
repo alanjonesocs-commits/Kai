@@ -12,8 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
-import com.inspiredandroid.kai.permissionQualifier
 import com.inspiredandroid.kai.diagnostics.NiaDiagnostics
+import com.inspiredandroid.kai.permissionQualifier
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
@@ -186,5 +186,4 @@ actual fun VoiceConversationControl(
             }
         }
     }
-
 }

@@ -1,7 +1,7 @@
 package com.inspiredandroid.kai.nia.memory
 
-import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryAssessment
+import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
 import kotlinx.serialization.json.*
 import kotlin.time.ExperimentalTime

@@ -52,10 +52,10 @@ data class MemBundle(
     companion object {
         fun parseEpisodes(text: String): List<PamEpisode> {
             val episodes = text
-            .lineSequence()
-            .filter { it.isNotBlank() }
-            .map { memJson.decodeFromString(PamEpisode.serializer(), it) }
-            .toList()
+                .lineSequence()
+                .filter { it.isNotBlank() }
+                .map { memJson.decodeFromString(PamEpisode.serializer(), it) }
+                .toList()
             episodes.forEachIndexed { index, episode ->
                 require(episode.id.isNotBlank()) { "Memory episode $index has no id" }
                 require(episode.key.isNotBlank()) { "Memory episode $index has no key" }

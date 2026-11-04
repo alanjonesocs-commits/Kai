@@ -2,8 +2,8 @@ package com.inspiredandroid.kai.diagnostics
 
 import com.russhwolf.settings.Settings
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
@@ -70,6 +70,5 @@ object NiaDiagnostics {
         return safe
     }
 
-    private fun createTraceId(): String =
-        "${Clock.System.now().toEpochMilliseconds()}-${(0..999999).random()}"
+    private fun createTraceId(): String = "${Clock.System.now().toEpochMilliseconds()}-${(0..999999).random()}"
 }

@@ -70,10 +70,12 @@ class MemoryStore(appSettings: AppSettings) {
             .keys
         val hasUnclassifiedConflicts = entries.any { entry ->
             entry.key in conflictingKeys &&
-                (entry.receiptStatus != MemoryAssessment.CONFIRMED ||
-                    entry.claimStatus != MemoryAssessment.REPORTED ||
-                    entry.factStatus != MemoryAssessment.UNKNOWN ||
-                    entry.resolutionStatus != MemoryAssessment.NEEDS_VERIFICATION)
+                (
+                    entry.receiptStatus != MemoryAssessment.CONFIRMED ||
+                        entry.claimStatus != MemoryAssessment.REPORTED ||
+                        entry.factStatus != MemoryAssessment.UNKNOWN ||
+                        entry.resolutionStatus != MemoryAssessment.NEEDS_VERIFICATION
+                    )
         }
         val hasLegacyProvenance = entries.any { it.provenance.isEmpty() && (it.source != null || it.sourceConversationId != null) }
         if (duplicateIds.isEmpty() && entries.none { it.id.isBlank() } && !hasUnclassifiedConflicts && !hasLegacyProvenance) return null
@@ -189,8 +191,7 @@ class MemoryStore(appSettings: AppSettings) {
         return updateContentById(matches.single().id, content)
     }
 
-    suspend fun updateContentById(id: String, content: String): MemoryEntry? =
-        mutateEntry(id) { it.copy(content = content, updatedAt = Clock.System.now().toEpochMilliseconds()) }
+    suspend fun updateContentById(id: String, content: String): MemoryEntry? = mutateEntry(id) { it.copy(content = content, updatedAt = Clock.System.now().toEpochMilliseconds()) }
 
     suspend fun reinforceMemory(key: String): MemoryEntry? {
         val matches = memories.get().filter { it.key == key }
