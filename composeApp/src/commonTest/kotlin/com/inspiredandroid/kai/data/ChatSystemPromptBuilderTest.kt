@@ -262,7 +262,7 @@ class ChatSystemPromptBuilderTest {
     fun `synthetic lab context is clearly labelled and preserves evidence status`() {
         val out = build(
             variant = SystemPromptVariant.CHAT_REMOTE,
-            nia15LabMemoryContext = "- **workspace_room** [receipt: CONFIRMED; claim: REPORTED; actual fact: UNKNOWN; resolution: NEEDS_VERIFICATION]\\n  Fictional test claim: Room A.",
+            nia15LabMemoryContext = "- **workspace_room** [receipt: CONFIRMED; claim: REPORTED; actual fact: UNKNOWN; resolution: NEEDS_VERIFICATION]\n  Fictional test claim: Room A.",
         )
 
         assertTrue("## NIA15 Synthetic Memory Lab — TEST DATA ONLY" in out)
