@@ -29,6 +29,8 @@ import com.inspiredandroid.kai.ui.components.HolographicBrain
 fun CommandCentreScreen(
     onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenSkills: () -> Unit,
+    onOpenProjects: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -63,10 +65,24 @@ fun CommandCentreScreen(
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(
+            onClick = onOpenProjects,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Projects & workspace")
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onOpenSkills,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Skills & interactive tools")
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
             onClick = onOpenSettings,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Settings · Skills · Tools")
+            Text("Settings")
         }
     }
 }
