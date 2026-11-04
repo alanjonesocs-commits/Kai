@@ -39,6 +39,7 @@ actual fun VoiceConversationControl(
     val scope = rememberCoroutineScope()
     val latestOnRecognized = rememberUpdatedState(onRecognized)
     val latestOnError = rememberUpdatedState(onError)
+    val latestOnActiveChange = rememberUpdatedState(onActiveChange)
 
     IconButton(
         onClick = {
@@ -65,7 +66,10 @@ actual fun VoiceConversationControl(
     if (listeningEnabled) {
         DisposableEffect(listeningEnabled) {
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-                latestOnError.value("Speech recognition is unavailable on this device.")
+                val message = "Speech recognition is unavailable on this device."
+                latestOnError.value(message)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                latestOnActiveChange.value(false)
                 onDispose { }
             } else {
                 val recognizer = runCatching {
@@ -103,11 +107,18 @@ actual fun VoiceConversationControl(
 
                         override fun onError(error: Int) {
                             if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                                latestOnError.value("Microphone permission was lost.")
-                            } else if (error != SpeechRecognizer.ERROR_NO_MATCH &&
+                                val message = "Microphone permission was lost."
+                                latestOnError.value(message)
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                latestOnActiveChange.value(false)
+                                return
+                            }
+                            if (error != SpeechRecognizer.ERROR_NO_MATCH &&
                                 error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT
                             ) {
-                                latestOnError.value("Speech recognition error ($error). Retrying.")
+                                val message = "Speech recognition error ($error). Retrying."
+                                latestOnError.value(message)
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                             handler.removeCallbacks(restart)
                             handler.postDelayed(restart, if (
