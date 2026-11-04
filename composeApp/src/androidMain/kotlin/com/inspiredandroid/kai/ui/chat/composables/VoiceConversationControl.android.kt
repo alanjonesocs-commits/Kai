@@ -120,6 +120,7 @@ actual fun VoiceConversationControl(
                             "inference",
                             failure.message ?: "Local speech recognition failed.",
                             failure::class.qualifiedName,
+                            stackTrace = failure.stackTraceToString(),
                         )
                         scope.launch {
                             latestOnError.value(
@@ -165,6 +166,7 @@ actual fun VoiceConversationControl(
                 "start_or_runtime",
                 message,
                 failure::class.qualifiedName,
+                stackTrace = failure.stackTraceToString(),
             )
             latestOnError.value(message)
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
