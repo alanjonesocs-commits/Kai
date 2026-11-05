@@ -38,6 +38,7 @@ import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.ThemeMode
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
+import com.inspiredandroid.kai.voice.NiaVoiceController
 import com.inspiredandroid.kai.tools.SetupPermissionHandler
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
@@ -76,6 +77,7 @@ fun App(
     lightColorScheme: ColorScheme = LightColorScheme,
     darkColorScheme: ColorScheme = DarkColorScheme,
     textToSpeech: TextToSpeechInstance? = null,
+    niaVoiceController: NiaVoiceController? = null,
     isKoinStarted: Boolean = false,
     onAppOpens: ((Int) -> Unit)? = null,
 ) {
@@ -91,14 +93,14 @@ fun App(
     // Reuse global Koin if already started (Android Application class),
     // otherwise create a new instance (iOS, Desktop, Wasm).
     if (isKoinStarted) {
-        AppContent(navController, lightColorScheme, darkColorScheme, textToSpeech, onAppOpens)
+        AppContent(navController, lightColorScheme, darkColorScheme, textToSpeech, niaVoiceController, onAppOpens)
     } else {
         KoinApplication(
             configuration = koinConfiguration {
                 modules(appModule)
             },
         ) {
-            AppContent(navController, lightColorScheme, darkColorScheme, textToSpeech, onAppOpens)
+            AppContent(navController, lightColorScheme, darkColorScheme, textToSpeech, niaVoiceController, onAppOpens)
         }
     }
 }
@@ -109,6 +111,7 @@ private fun AppContent(
     lightColorScheme: ColorScheme,
     darkColorScheme: ColorScheme,
     textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController?,
     onAppOpens: ((Int) -> Unit)?,
 ) {
     val appSettings = koinInject<AppSettings>()
@@ -211,6 +214,7 @@ private fun AppContent(
                         ChatScreen(
                             viewModel = chatViewModel,
                             textToSpeech = textToSpeech,
+                            niaVoiceController = niaVoiceController,
                             onNavigateToSettings = {
                                 navController.navigate(Settings)
                             },
