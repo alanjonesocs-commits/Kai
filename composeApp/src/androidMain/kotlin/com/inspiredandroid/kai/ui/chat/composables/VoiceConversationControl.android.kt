@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.sqrt
 
-private const val PCM_QUEUE_CAPACITY = 5
+private const val PCM_QUEUE_CAPACITY = 25
 private const val PCM_FRAME_SAMPLES = 320
 private const val PCM_FRAMES_PER_BATCH = 5
 private const val PCM_BATCH_DURATION_NANOS = 100_000_000L
