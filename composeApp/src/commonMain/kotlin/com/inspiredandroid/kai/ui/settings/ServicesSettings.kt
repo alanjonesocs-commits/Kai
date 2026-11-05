@@ -318,6 +318,23 @@ private fun SponsorList(
 internal fun ServicesContent(uiState: SettingsUiState, actions: SettingsActions) {
     var showAddServiceSheet by remember { mutableStateOf(false) }
 
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = "CONNECTIONS  /  API GATEWAY",
+            style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.2.dp),
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = "PROVIDERS  •  ENDPOINTS  •  MODEL ROUTING  •  ACCESS KEYS",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    Spacer(Modifier.height(12.dp))
+
     // Configured services list
     val entries = uiState.configuredServices
     ReorderableColumn(
