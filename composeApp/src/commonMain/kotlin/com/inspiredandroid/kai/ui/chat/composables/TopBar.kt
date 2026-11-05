@@ -76,16 +76,25 @@ internal fun TopBar(
         Row {
             LeadingButtons(textToSpeech, isSpeechOutputEnabled, isSpeaking, actions, isChatHistoryEmpty, hasSavedConversations, onShowHistory, isSandboxAvailable, isSandboxOpen, isShellExecuting, onToggleSandbox)
             Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 androidx.compose.material3.Text(
                     text = "N I A",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 4.dp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 androidx.compose.material3.Text(
-                    text = "PERSONAL AI",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = "ALIEN INTELLIGENCE SYSTEM",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                androidx.compose.material3.Text(
+                    text = when {
+                        isSpeaking -> "VOICE TRANSMITTING"
+                        isSpeechOutputEnabled -> "VOICE OUTPUT ENABLED"
+                        else -> "NEURAL INTERFACE"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                 )
             }
             Spacer(Modifier.weight(1f))
