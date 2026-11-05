@@ -73,6 +73,14 @@ object Home
 object Conversation
 
 @Serializable
+@SerialName("memory-settings")
+object MemorySettings
+
+@Serializable
+@SerialName("systems-settings")
+object SystemsSettings
+
+@Serializable
 @SerialName("settings")
 object Settings
 
@@ -235,10 +243,10 @@ private fun AppContent(
                                 navController.navigate(Conversation) { launchSingleTop = true }
                             },
                             onOpenMemory = {
-                                navController.navigate(Settings) { launchSingleTop = true }
+                                navController.navigate(MemorySettings) { launchSingleTop = true }
                             },
                             onOpenSystems = {
-                                navController.navigate(Settings) { launchSingleTop = true }
+                                navController.navigate(SystemsSettings) { launchSingleTop = true }
                             },
                         )
                     }
@@ -263,6 +271,28 @@ private fun AppContent(
                         }
                         SettingsScreen(
                             niaVoiceController = niaVoiceController,
+                            onNavigateBack = {
+                                chatViewModel.refreshSettings()
+                                navController.navigateUp()
+                            },
+                            navigationTabBar = navigationTabBar,
+                        )
+                    }
+                    composable<MemorySettings> {
+                        SettingsScreen(
+                            niaVoiceController = niaVoiceController,
+                            initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Agent,
+                            onNavigateBack = {
+                                chatViewModel.refreshSettings()
+                                navController.navigateUp()
+                            },
+                            navigationTabBar = navigationTabBar,
+                        )
+                    }
+                    composable<SystemsSettings> {
+                        SettingsScreen(
+                            niaVoiceController = niaVoiceController,
+                            initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Services,
                             onNavigateBack = {
                                 chatViewModel.refreshSettings()
                                 navController.navigateUp()
