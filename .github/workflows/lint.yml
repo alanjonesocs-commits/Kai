@@ -56,16 +56,15 @@ jobs:
       - name: Compile Android FOSS debug APK
         run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
 
-      - name: Commit formatter-only changes
+      - name: Ensure formatter produced a clean tree
         run: |
           if git diff --quiet; then
-            echo "No formatting changes were needed."
+            echo "Formatting is clean."
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -u
-            git commit -m "Apply Spotless Kotlin formatting"
-            git push origin HEAD:${{ github.ref_name }}
+            echo "::error::Spotless changed files during CI. Commit the formatting changes before rerunning CI."
+            git diff --check
+            git diff --name-only
+            exit 1
           fi
 
       - name: Upload Pixel installation APK
