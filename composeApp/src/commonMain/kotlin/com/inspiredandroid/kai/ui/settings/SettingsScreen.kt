@@ -180,8 +180,8 @@ fun SettingsScreenContent(
     onInstallPackages: () -> Unit = {},
     onMigrateHome: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
-    navigationTabBar: (@Composable () -> Unit)? = null,
     runtimeSnapshot: NiaRuntimeSnapshot = NiaRuntimeSnapshot(),
+    navigationTabBar: (@Composable () -> Unit)? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(Res.string.snackbar_undo)
