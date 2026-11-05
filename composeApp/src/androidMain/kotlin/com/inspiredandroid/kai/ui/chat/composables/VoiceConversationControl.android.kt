@@ -137,8 +137,8 @@ actual fun VoiceConversationControl(
             runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Ready)
 
             // Native Zipformer inference stays serial and off the AudioRecord callback.
-            // Five 20 ms capture frames form one 100 ms recognizer batch. Five queued
-            // batches retain the existing 500 ms upper bound without per-frame dispatch.
+            // Five 20 ms capture frames form one 100 ms recognizer batch. Twenty-five
+            // queued batches retain a 2.5 s bounded backlog without per-frame dispatch.
             val inferenceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             workerScope = inferenceScope
             recognizerWorker = inferenceScope.launch {
