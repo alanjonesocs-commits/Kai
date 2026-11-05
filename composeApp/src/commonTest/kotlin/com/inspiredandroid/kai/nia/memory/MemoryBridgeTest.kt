@@ -31,6 +31,30 @@ class MemoryBridgeTest {
     }
 
     @Test
+    fun providerSharingPermissionRoundTripsExactly() {
+        val original = MemoryEntry(
+            key = "shareable_preference",
+            content = "A non-sensitive preference",
+            createdAt = 1_700_000_000_123,
+            updatedAt = 1_700_000_500_456,
+            providerShareAllowed = true,
+        )
+
+        assertEquals(original, original.toPamEpisode().toMemoryEntry())
+    }
+
+    @Test
+    fun legacyMemoriesWithoutSharingFlagRemainLocalOnly() {
+        val imported = kaiJsonToMemBundle(
+            """{"agent_memories":[{"key":"private_note","content":"local"}]}""",
+            now,
+        ).episodes.single()
+
+        assertEquals(false, imported.providerShareAllowed)
+        assertEquals(false, imported.toMemoryEntry().providerShareAllowed)
+    }
+
+    @Test
     fun conflictingClaimMetadataAndIdsRoundTrip() {
         val original = MemoryEntry(
             key = "residence",
@@ -130,6 +154,19 @@ class MemoryBridgeTest {
         val roundTripped = kaiJsonToMemBundle(imported, now).episodes.single()
         assertEquals(episode.timestamp, roundTripped.timestamp)
         assertEquals(episode.updatedAt, roundTripped.updatedAt)
+    }
+
+    @Test
+    fun kaiSettingsBridgePreservesProviderSharingPermission() {
+        val settingsJson =
+            """{"agent_memories":[{"id":"share-1","key":"shareable","content":"explicit","createdAt":1700000000123,"updatedAt":1700000900456,"providerShareAllowed":true}]}"""
+
+        val bundle = kaiJsonToMemBundle(settingsJson, now)
+        assertEquals(true, bundle.episodes.single().providerShareAllowed)
+
+        val exported = memBundleToKaiJson(bundle, """{"version":1}""")
+        val restored = kaiJsonToMemBundle(exported, now)
+        assertEquals(true, restored.episodes.single().providerShareAllowed)
     }
 
     @Test
