@@ -51,7 +51,7 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             gradle :composeApp:desktopTest --no-daemon --stacktrace && exit 0
-            echo "Desktop tests failed on attempt $attempt; retrying after Gradle/network transient failure..."
+            echo "Desktop tests failed on attempt $attempt; retrying after transient dependency/network failure..."
             sleep 15
           done
           exit 1
@@ -59,8 +59,8 @@ jobs:
       - name: Compile Android FOSS debug APK
         run: |
           for attempt in 1 2 3; do
-            ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace && exit 0
-            echo "Android build failed on attempt $attempt; retrying after Gradle/network transient failure..."
+            gradle :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace && exit 0
+            echo "Android build failed on attempt $attempt; retrying after transient dependency/network failure..."
             sleep 15
           done
           exit 1
