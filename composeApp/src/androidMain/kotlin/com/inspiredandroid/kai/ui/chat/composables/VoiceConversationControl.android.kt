@@ -191,6 +191,22 @@ actual fun VoiceConversationControl(
                 }
             }
             val engine = NiaAndroidAudioEngine(
+                onCaptureError = { message ->
+                    runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, message)
+                    if (recognitionFailureReported.compareAndSet(false, true)) {
+                        NiaDiagnostics.record(
+                            "ERROR",
+                            "voice.audio",
+                            "capture",
+                            message,
+                        )
+                        scope.launch {
+                            latestOnError.value(message)
+                            latestOnActiveChange.value(false)
+                        }
+                        pcmFrames.close(IllegalStateException(message))
+                    }
+                },
                 onPcmFrame = { samples, _ ->
                     runtime.setWaveformAmplitude(waveformLevel(samples))
                     val batch = batcher.append(samples)
