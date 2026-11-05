@@ -121,6 +121,19 @@ class MemoryStoreTest {
     }
 
     @Test
+    fun `provider sharing is denied by default and only enabled by an explicit update`() = runTest {
+        val store = MemoryStore(AppSettings(MapSettings()))
+        val memory = store.store("family_note", "A private family detail")
+
+        assertFalse(memory.providerShareAllowed)
+        assertTrue(store.getProviderShareableMemories().isEmpty())
+
+        store.updateProviderShareById(memory.id, true)
+
+        assertEquals(listOf(memory.id), store.getProviderShareableMemories().map { it.id })
+    }
+
+    @Test
     fun `memories without provenance remain explicitly un-attributed`() = runTest {
         val store = MemoryStore(AppSettings(MapSettings()))
         val entry = store.store("timezone", "UTC")
