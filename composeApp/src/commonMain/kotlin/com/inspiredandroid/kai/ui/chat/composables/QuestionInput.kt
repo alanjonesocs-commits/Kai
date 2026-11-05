@@ -258,6 +258,22 @@ fun QuestionInput(
         // grow with the font scale — otherwise the composer shows a single line of
         // what the user is typing at the largest accessibility font size.
         val maxComposerHeight = 120.dp * LocalDensity.current.fontScale
+        val voiceIsListening = voiceConversationActive &&
+            !awaitingVoiceReply &&
+            !isLoading &&
+            !speakingVoiceReply
+        val channelStatus = when {
+            speakingVoiceReply -> "SPEAKING"
+            awaitingVoiceReply || isLoading -> "PROCESSING"
+            voiceIsListening -> "LISTENING"
+            voiceConversationActive -> "VOICE SESSION"
+            else -> "STANDBY"
+        }
+        val channelStatusColor = when {
+            speakingVoiceReply || voiceIsListening -> MaterialTheme.colorScheme.primary
+            awaitingVoiceReply || isLoading -> MaterialTheme.colorScheme.secondary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -266,15 +282,26 @@ fun QuestionInput(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "NIA  /  INPUT CHANNEL",
+                text = "NIA  /  NEURAL INPUT",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
             )
-            Text(
-                text = if (isLoading) "TRANSMITTING" else "READY",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isLoading) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(channelStatusColor),
+                )
+                Text(
+                    text = channelStatus,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = channelStatusColor,
+                )
+            }
         }
         TextField(
             value = textState,
@@ -285,9 +312,9 @@ fun QuestionInput(
                 .heightIn(max = maxComposerHeight)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
                 .border(
-                    BorderStroke(width = 2.dp, brush = gradientBrush),
+                    BorderStroke(width = 1.5.dp, brush = gradientBrush),
                     shape = RoundedCornerShape(28.dp),
                 )
                 .onPreviewKeyEvent { event ->
