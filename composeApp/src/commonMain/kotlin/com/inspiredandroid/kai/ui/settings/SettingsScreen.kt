@@ -237,6 +237,23 @@ fun SettingsScreenContent(
                 TopBar(onNavigateBack = onNavigateBack)
             }
 
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                horizontalAlignment = CenterHorizontally,
+            ) {
+                Text(
+                    text = "N I A   /   SYSTEM CONTROL",
+                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 2.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "CONFIGURATION  •  CONNECTIONS  •  MEMORY VAULT",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
             val visibleTabs = remember(sandboxState.showSandbox) {
                 SettingsTab.entries.filter { it != SettingsTab.Sandbox || sandboxState.showSandbox }.toImmutableList()
             }
