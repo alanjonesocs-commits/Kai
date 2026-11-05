@@ -119,6 +119,7 @@ fun QuestionInput(
     var voiceConversationActive by remember { mutableStateOf(false) }
     var awaitingVoiceReply by remember { mutableStateOf(false) }
     var speakingVoiceReply by remember { mutableStateOf(false) }
+    var voiceError by remember { mutableStateOf<String?>(null) }
     var lastVoiceReplyId by remember { mutableStateOf(assistantReplyId) }
     var wasVoiceConversationActive by remember { mutableStateOf(false) }
     val voiceScope = rememberCoroutineScope()
@@ -303,6 +304,14 @@ fun QuestionInput(
                 )
             }
         }
+        voiceError?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+            )
+        }
         TextField(
             value = textState,
             onValueChange = onTextStateChange,
@@ -390,6 +399,7 @@ fun QuestionInput(
                                 voiceConversationActive = active
                                 onVoiceConversationActiveChange(active)
                                 if (active) {
+                                    voiceError = null
                                     lastVoiceReplyId = assistantReplyId
                                     awaitingVoiceReply = false
                                 } else {
@@ -403,7 +413,7 @@ fun QuestionInput(
                                     ask(recognized.trim())
                                 }
                             },
-                            onError = { },
+                            onError = { message -> voiceError = message },
                         )
                     }
                     VoiceInputButton { recognized ->

@@ -150,6 +150,9 @@ fun ChatScreen(
     val niaRuntime = koinInject<NiaRuntimeState>()
 
     LaunchedEffect(uiState.isLoading, uiState.isSpeaking) {
+        // An active user-started voice session owns the idle/listening transition.
+        // Chat processing and playback may temporarily take precedence, but an Idle
+        // update must not erase Listening while the mic session is still active.
         niaRuntime.setVoicePhase(
             when {
                 uiState.isSpeaking -> NiaVoicePhase.Speaking
@@ -157,6 +160,10 @@ fun ChatScreen(
                 else -> NiaVoicePhase.Idle
             },
         )
+    }
+
+    LaunchedEffect(uiState.history.size) {
+        if (uiState.history.isNotEmpty()) niaRuntime.signalInteraction()
     }
 
     ChatScreenContent(

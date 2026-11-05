@@ -1,6 +1,7 @@
 package com.inspiredandroid.kai.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,10 +19,27 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaVoicePhase
+import org.koin.compose.koinInject
 import kotlin.math.abs
 
 @Composable
 fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
+    val runtimeState = koinInject<NiaRuntimeState>()
+    val runtime by runtimeState.state.collectAsStateWithLifecycle()
+    val waveform by animateFloatAsState(
+        targetValue = runtime.waveformAmplitude,
+        animationSpec = tween(90),
+        label = "nia-live-waveform",
+    )
+    val phaseTint = when (runtime.voicePhase) {
+        NiaVoicePhase.Idle -> Color(0xFF63E9FF)
+        NiaVoicePhase.Listening -> Color(0xFFB7FF6A)
+        NiaVoicePhase.Thinking -> Color(0xFFB69CFF)
+        NiaVoicePhase.Speaking -> Color(0xFF62F5E5)
+    }
     val transition = rememberInfiniteTransition()
     val pulse by transition.animateFloat(
         0f,
@@ -66,6 +84,20 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
             )
         }
 
+        // Live neural response ring: phase tint comes from the shared voice runtime,
+        // while radius and intensity are driven by the actual microphone PCM level.
+        drawCircle(
+            color = phaseTint.copy(alpha = 0.08f + waveform * 0.28f),
+            radius = s * (0.35f + waveform * 0.075f),
+            center = c,
+            style = Stroke(s * (0.004f + waveform * 0.008f)),
+        )
+        drawCircle(
+            color = phaseTint.copy(alpha = 0.035f + waveform * 0.09f),
+            radius = s * (0.29f + waveform * 0.045f),
+            center = c,
+        )
+
         // Holographic scan rings.
         for (i in 0..2) {
             drawCircle(
@@ -89,11 +121,11 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
             cubicTo(c.x + s * 0.34f, c.y + s * 0.20f, c.x + s * 0.18f, c.y + s * 0.28f, c.x, c.y + s * 0.23f)
             close()
         }
-        drawPath(left, cyan.copy(alpha = 0.72f), style = Stroke(s * 0.012f * breathe))
-        drawPath(right, blue.copy(alpha = 0.72f), style = Stroke(s * 0.012f * breathe))
+        drawPath(left, phaseTint.copy(alpha = 0.62f + waveform * 0.28f), style = Stroke(s * 0.012f * (breathe + waveform * 0.16f)))
+        drawPath(right, blue.copy(alpha = 0.62f + waveform * 0.24f), style = Stroke(s * 0.012f * (breathe + waveform * 0.12f)))
         drawCircle(
-            color = cyan.copy(alpha = 0.055f),
-            radius = s * 0.20f * breathe,
+            color = phaseTint.copy(alpha = 0.055f + waveform * 0.16f),
+            radius = s * (0.20f + waveform * 0.035f) * breathe,
             center = c,
         )
 

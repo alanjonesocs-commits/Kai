@@ -19,6 +19,8 @@ import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
 import com.inspiredandroid.kai.voice.NiaSherpaModelInstaller
 import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
+import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaVoicePhase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +31,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.sqrt
 
 private const val PCM_QUEUE_CAPACITY = 25
 
@@ -42,10 +47,15 @@ actual fun VoiceConversationControl(
 ) {
     val context = LocalContext.current
     val permissionController = koinInject<PermissionController>(permissionQualifier(AppPermission.RECORD_AUDIO))
+    val runtime = koinInject<NiaRuntimeState>()
     val scope = rememberCoroutineScope()
     val latestOnRecognized = rememberUpdatedState(onRecognized)
     val latestOnError = rememberUpdatedState(onError)
     val latestOnActiveChange = rememberUpdatedState(onActiveChange)
+
+    LaunchedEffect(active) {
+        runtime.setVoiceSessionActive(active)
+    }
 
     IconButton(
         onClick = {
@@ -75,6 +85,7 @@ actual fun VoiceConversationControl(
 
     LaunchedEffect(listeningEnabled) {
         if (!listeningEnabled) return@LaunchedEffect
+        runtime.setVoicePhase(NiaVoicePhase.Listening)
 
         var audioEngine: NiaAndroidAudioEngine? = null
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
@@ -95,6 +106,7 @@ actual fun VoiceConversationControl(
                     onPartialTranscript = { /* Retained for future live captions. */ },
                     onFinalTranscript = { transcript ->
                         scope.launch {
+                            runtime.signalInteraction()
                             latestOnRecognized.value(transcript)
                         }
                     },
@@ -107,10 +119,29 @@ actual fun VoiceConversationControl(
             // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
             val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
             val recognitionFailureReported = AtomicBoolean(false)
+            val queuedFrames = AtomicInteger(0)
+            val lastSlowFrameDiagnosticNanos = AtomicLong(0L)
             recognizerWorker = launch(Dispatchers.Default) {
                 try {
                     for (samples in pcmFrames) {
+                        queuedFrames.decrementAndGet()
+                        val inferenceStarted = System.nanoTime()
                         recognizer.acceptPcm16(samples)
+                        val inferenceDuration = System.nanoTime() - inferenceStarted
+                        val now = System.nanoTime()
+                        val lastDiagnostic = lastSlowFrameDiagnosticNanos.get()
+                        if ((inferenceDuration > 20_000_000L || queuedFrames.get() >= PCM_QUEUE_CAPACITY / 2) &&
+                            now - lastDiagnostic >= 5_000_000_000L &&
+                            lastSlowFrameDiagnosticNanos.compareAndSet(lastDiagnostic, now)
+                        ) {
+                            NiaDiagnostics.record(
+                                "WARN",
+                                "voice.recognizer",
+                                "slow_frame",
+                                "Zipformer processing is approaching microphone frame cadence; inference=" +
+                                    (inferenceDuration / 1_000_000).toString() + "ms, queued=" + queuedFrames.get(),
+                            )
+                        }
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -135,11 +166,13 @@ actual fun VoiceConversationControl(
             }
             val engine = NiaAndroidAudioEngine(
                 onPcmFrame = { samples, _ ->
+                    runtime.setWaveformAmplitude(waveformLevel(samples))
+                    queuedFrames.incrementAndGet()
                     // Never wait for inference here. A full queue ends the session
                     // visibly rather than silently dropping speech frames.
-                    if (pcmFrames.trySend(samples).isFailure &&
-                        recognitionFailureReported.compareAndSet(false, true)
-                    ) {
+                    if (pcmFrames.trySend(samples).isFailure) {
+                        queuedFrames.decrementAndGet()
+                        if (recognitionFailureReported.compareAndSet(false, true)) {
                         NiaDiagnostics.record(
                             "ERROR",
                             "voice.audio",
@@ -151,12 +184,16 @@ actual fun VoiceConversationControl(
                                 "Speech recognition could not keep up with microphone audio. Please try again.",
                             ),
                         )
+                        }
                     }
                 },
-                onVoiceActivity = { _, _ -> },
+                onVoiceActivity = { _, _ ->
+                    runtime.setVoicePhase(NiaVoicePhase.Listening)
+                },
             )
             audioEngine = engine
             engine.startCapture()
+            runtime.setVoicePhase(NiaVoicePhase.Listening)
             awaitCancellation()
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -175,6 +212,7 @@ actual fun VoiceConversationControl(
             latestOnActiveChange.value(false)
         } finally {
             NiaDiagnostics.record("INFO", "voice", "session_end", "Voice session stopped.")
+            runtime.setWaveformAmplitude(0f)
             // Stop the microphone thread before releasing the native recogniser it feeds.
             withContext(Dispatchers.IO) {
                 runCatching { audioEngine?.close() }
@@ -186,4 +224,15 @@ actual fun VoiceConversationControl(
             }
         }
     }
+}
+
+
+private fun waveformLevel(samples: ShortArray): Float {
+    if (samples.isEmpty()) return 0f
+    var squaredTotal = 0.0
+    for (sample in samples) {
+        val normalized = sample.toDouble() / 32768.0
+        squaredTotal += normalized * normalized
+    }
+    return sqrt(squaredTotal / samples.size).toFloat().coerceIn(0f, 1f)
 }
