@@ -1,7 +1,9 @@
 package com.inspiredandroid.kai.ui.chat.composables
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.data.Attachment
@@ -51,8 +54,25 @@ internal fun UserMessage(
             Column(
                 modifier = Modifier
                     .background(
-                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
-                        RoundedCornerShape(8.dp),
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.17f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                            ),
+                        ),
+                        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp),
+                    )
+                    .border(
+                        BorderStroke(
+                            1.dp,
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.48f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f),
+                                ),
+                            ),
+                        ),
+                        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp),
                     )
                     .padding(16.dp),
                 horizontalAlignment = Alignment.End,
