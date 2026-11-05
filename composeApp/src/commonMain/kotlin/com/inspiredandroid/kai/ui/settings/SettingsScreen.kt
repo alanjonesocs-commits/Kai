@@ -422,9 +422,9 @@ private fun SettingsTabSelector(
                             tabBounds[tab] = start..(start + coordinates.size.width)
                         }
                         .handCursor()
-                        .clip(RoundedCornerShape(50))
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onSelectTab(tab) },
-                    shape = RoundedCornerShape(50),
+                    shape = RoundedCornerShape(8.dp),
                     color = if (isSelected) {
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                     } else {
