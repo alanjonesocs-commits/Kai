@@ -234,6 +234,94 @@ internal class NiaAndroidAudioEngine(
         return generation
     }
 
+    /**
+     * Streams generated mono float PCM directly to one AudioTrack.
+     *
+     * The producer runs on the calling thread and may call [writeSamples] repeatedly.
+     * Returning false from writeSamples signals cancellation to the producer.
+     */
+    fun playPcmStream(
+        playbackSampleRate: Int,
+        generate: (writeSamples: (FloatArray) -> Boolean) -> Unit,
+    ): Long {
+        require(playbackSampleRate in 8_000..48_000) { "Unsupported playback sample rate." }
+        val generation = playbackGeneration.incrementAndGet()
+        stopPlayerOnly()
+
+        val minBuffer = AudioTrack.getMinBufferSize(
+            playbackSampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+        )
+        check(minBuffer > 0) { "PCM playback is unavailable." }
+
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build(),
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setSampleRate(playbackSampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build(),
+            )
+            .setBufferSizeInBytes(maxOf(minBuffer, PLAYBACK_BUFFER_BYTES))
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+
+        var registered = false
+        try {
+            check(track.state == AudioTrack.STATE_INITIALIZED) {
+                "Could not initialise audio playback."
+            }
+            synchronized(lock) {
+                if (playbackGeneration.get() == generation) {
+                    player = track
+                    registered = true
+                }
+            }
+            if (!registered) return generation
+            track.play()
+
+            generate { samples ->
+                if (samples.isEmpty() || playbackGeneration.get() != generation) {
+                    return@generate false
+                }
+                val pcm = ShortArray(samples.size) { index ->
+                    (samples[index].coerceIn(-1.0f, 1.0f) * Short.MAX_VALUE).toInt().toShort()
+                }
+                var offset = 0
+                while (offset < pcm.size && playbackGeneration.get() == generation) {
+                    val written = track.write(
+                        pcm,
+                        offset,
+                        minOf(PLAYBACK_WRITE_SAMPLES, pcm.size - offset),
+                        AudioTrack.WRITE_BLOCKING,
+                    )
+                    if (written <= 0) return@generate false
+                    offset += written
+                }
+                playbackGeneration.get() == generation
+            }
+
+            if (playbackGeneration.get() == generation &&
+                track.playState == AudioTrack.PLAYSTATE_PLAYING
+            ) {
+                track.stop()
+            }
+        } finally {
+            synchronized(lock) {
+                if (player === track) player = null
+            }
+            runCatching { track.release() }
+        }
+        return generation
+    }
+
     /** Invalidates queued playback immediately; stale generations cannot continue. */
     fun interruptPlayback() {
         playbackGeneration.incrementAndGet()
