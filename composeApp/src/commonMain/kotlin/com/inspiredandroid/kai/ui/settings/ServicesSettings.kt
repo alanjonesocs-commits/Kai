@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.formatFileSize
@@ -324,12 +325,12 @@ internal fun ServicesContent(uiState: SettingsUiState, actions: SettingsActions)
     ) {
         Text(
             text = "CONNECTIONS  /  API GATEWAY",
-            style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.2.dp),
+            style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.2.sp),
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "PROVIDERS  •  ENDPOINTS  •  MODEL ROUTING  •  ACCESS KEYS",
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.dp),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
