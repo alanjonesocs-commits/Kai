@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -12,11 +13,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,14 +48,11 @@ import kai.composeapp.generated.resources.start_interactive_ui
 import kai.composeapp.generated.resources.welcome_message
 import org.jetbrains.compose.resources.stringResource
 
-/**
- * Phosphor green for the Kai Build button, taken from the ANSI palette its own
- * terminal paints with: the bright green on dark backgrounds, the darker normal
- * green where a light one would wash it out. Colors only — the button keeps the
- * shape and label style it shares with the rest of the empty state.
- */
 private val TerminalGreenOnDark = Color(0xFF16C60C)
 private val TerminalGreenOnLight = Color(0xFF13A10E)
+private val NiaCyan = Color(0xFF62F5E5)
+private val NiaViolet = Color(0xFFB69CFF)
+private val NiaGreen = Color(0xFFB7FF6A)
 
 @Composable
 internal fun EmptyState(
@@ -60,40 +60,67 @@ internal fun EmptyState(
     isUsingSharedKey: Boolean,
     onStartInteractiveMode: (() -> Unit)? = null,
     onOpenKaiBuild: (() -> Unit)? = null,
+    onOpenSystems: () -> Unit = {},
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = "N I A  /  NATURAL INTELLIGENCE ASSISTANT",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-            color = MaterialTheme.colorScheme.primary,
+            color = NiaCyan,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(12.dp))
-        HolographicBrain()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
-            text = "SENTIENT INTERFACE  •  LOCAL SIGNAL ACTIVE",
+            text = "PERSONAL INTELLIGENCE SYSTEM",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-            color = MaterialTheme.colorScheme.secondary,
+            color = NiaViolet,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(4.dp))
+        HolographicBrain(size = 196.dp)
+        Text(
+            text = "NEURAL CORE  /  STANDBY",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.7.sp),
+            color = NiaCyan,
+        )
+        Spacer(Modifier.height(10.dp))
         Text(
             text = stringResource(Res.string.welcome_message),
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 8.dp),
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground,
         )
+        Spacer(Modifier.height(12.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StatusChip("CHAT", NiaCyan)
+            StatusChip("VOICE", NiaViolet)
+            StatusChip("MEMORY", NiaGreen)
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onOpenSystems,
+            modifier = Modifier.handCursor(),
+            border = BorderStroke(1.dp, NiaCyan.copy(alpha = 0.65f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = NiaCyan),
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("OPEN SYSTEMS")
+        }
         if (onStartInteractiveMode != null) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(6.dp))
             AnimatedBorderButton(
                 text = stringResource(Res.string.start_interactive_ui),
                 onClick = onStartInteractiveMode,
             )
-            Spacer(Modifier.height(8.dp))
         }
         if (onOpenKaiBuild != null) {
             val terminalGreen = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
@@ -115,7 +142,6 @@ internal fun EmptyState(
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.kai_build_open))
             }
-            Spacer(Modifier.height(8.dp))
         }
         if (isUsingSharedKey) {
             val linkColor = MaterialTheme.colorScheme.primary
@@ -133,12 +159,28 @@ internal fun EmptyState(
             }
             Text(
                 annotatedString,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
+    }
+}
+
+@Composable
+private fun StatusChip(label: String, accent: Color) {
+    Surface(
+        color = accent.copy(alpha = 0.08f),
+        contentColor = accent,
+        shape = RoundedCornerShape(50),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+        )
     }
 }
 
