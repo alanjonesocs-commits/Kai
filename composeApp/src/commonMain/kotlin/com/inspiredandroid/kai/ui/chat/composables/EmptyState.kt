@@ -73,6 +73,12 @@ internal fun EmptyState(
         )
         Spacer(Modifier.height(12.dp))
         HolographicBrain()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "NEURAL CORE  /  HOLOGRAPHIC DISPLAY",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+            color = MaterialTheme.colorScheme.secondary,
+        )
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(Res.string.welcome_message),
