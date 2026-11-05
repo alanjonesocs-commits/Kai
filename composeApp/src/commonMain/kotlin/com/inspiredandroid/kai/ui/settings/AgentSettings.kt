@@ -99,95 +99,95 @@ internal fun AgentContent(
         MemoryVaultCard(uiState, actions)
     } else {
         StaggeredSettingsColumns(
-        start = {
-            SettingsCard {
-                SoulEditor(
-                    soulText = uiState.soulText,
-                    onSaveSoul = actions.onSaveSoul,
-                )
-            }
-            SettingsCard {
-                ScheduledTaskList(
-                    tasks = uiState.scheduledTasks,
-                    heartbeatLog = uiState.heartbeatLog,
-                    onCancelTask = actions.onCancelTask,
-                    isSchedulingEnabled = uiState.isSchedulingEnabled,
-                    onToggleScheduling = actions.onToggleScheduling,
-                )
-            }
-            MemoryVaultCard(uiState, actions)
-        },
-        end = {
-            SettingsCard {
-                HeartbeatSection(
-                    isHeartbeatEnabled = uiState.isHeartbeatEnabled,
-                    heartbeatIntervalMinutes = uiState.heartbeatIntervalMinutes,
-                    activeHoursStart = uiState.heartbeatActiveHoursStart,
-                    activeHoursEnd = uiState.heartbeatActiveHoursEnd,
-                    heartbeatPrompt = uiState.heartbeatPrompt,
-                    heartbeatLog = uiState.heartbeatLog,
-                    heartbeatServiceEntries = uiState.heartbeatServiceEntries,
-                    heartbeatSelectedInstanceId = uiState.heartbeatSelectedInstanceId,
-                    isRefreshing = uiState.isRefreshingHeartbeat,
-                    onToggleHeartbeat = actions.onToggleHeartbeat,
-                    onChangeInterval = actions.onChangeHeartbeatInterval,
-                    onChangeActiveHours = actions.onChangeHeartbeatActiveHours,
-                    onSaveHeartbeatPrompt = actions.onSaveHeartbeatPrompt,
-                    onChangeHeartbeatService = actions.onChangeHeartbeatService,
-                    onRefresh = actions.onRefreshHeartbeat,
-                )
-            }
-            SettingsCard {
-                DiagnosticsSection()
-            }
-            if (uiState.showEmailToggle) {
+            start = {
                 SettingsCard {
-                    EmailSection(
-                        isEmailEnabled = uiState.isEmailEnabled,
-                        emailAccounts = uiState.emailAccounts,
-                        pollIntervalMinutes = uiState.emailPollIntervalMinutes,
-                        pendingCount = uiState.emailPendingCount,
-                        syncStates = uiState.emailSyncStates,
-                        refreshingAccountIds = uiState.refreshingEmailAccountIds,
-                        onToggleEmail = actions.onToggleEmail,
-                        onRemoveAccount = actions.onRemoveEmailAccount,
-                        onChangePollInterval = actions.onChangeEmailPollInterval,
-                        onRefreshAccount = actions.onRefreshEmailAccount,
+                    SoulEditor(
+                        soulText = uiState.soulText,
+                        onSaveSoul = actions.onSaveSoul,
                     )
                 }
-            }
-            if (uiState.showSmsSection) {
                 SettingsCard {
-                    SmsSection(
-                        isSmsEnabled = uiState.isSmsEnabled,
-                        permissionGranted = uiState.smsPermissionGranted,
-                        pollIntervalMinutes = uiState.smsPollIntervalMinutes,
-                        pendingCount = uiState.smsPendingCount,
-                        syncState = uiState.smsSyncState,
-                        isRefreshing = uiState.isRefreshingSms,
-                        isSmsSendEnabled = uiState.isSmsSendEnabled,
-                        sendPermissionGranted = uiState.smsSendPermissionGranted,
-                        onToggleSms = actions.onToggleSms,
-                        onChangePollInterval = actions.onChangeSmsPollInterval,
-                        onRefresh = actions.onRefreshSms,
-                        onToggleSmsSend = actions.onToggleSmsSend,
+                    ScheduledTaskList(
+                        tasks = uiState.scheduledTasks,
+                        heartbeatLog = uiState.heartbeatLog,
+                        onCancelTask = actions.onCancelTask,
+                        isSchedulingEnabled = uiState.isSchedulingEnabled,
+                        onToggleScheduling = actions.onToggleScheduling,
                     )
                 }
-            }
-            if (uiState.showNotificationsSection) {
+                MemoryVaultCard(uiState, actions)
+            },
+            end = {
                 SettingsCard {
-                    NotificationsSection(
-                        isEnabled = uiState.isNotificationsEnabled,
-                        accessGranted = uiState.notificationListenerAccessGranted,
-                        listenerBound = uiState.notificationListenerBound,
-                        pendingCount = uiState.notificationPendingCount,
-                        onToggle = actions.onToggleNotifications,
-                        onOpenAccessSettings = actions.onOpenNotificationListenerSettings,
-                        onClearPending = actions.onClearPendingNotifications,
+                    HeartbeatSection(
+                        isHeartbeatEnabled = uiState.isHeartbeatEnabled,
+                        heartbeatIntervalMinutes = uiState.heartbeatIntervalMinutes,
+                        activeHoursStart = uiState.heartbeatActiveHoursStart,
+                        activeHoursEnd = uiState.heartbeatActiveHoursEnd,
+                        heartbeatPrompt = uiState.heartbeatPrompt,
+                        heartbeatLog = uiState.heartbeatLog,
+                        heartbeatServiceEntries = uiState.heartbeatServiceEntries,
+                        heartbeatSelectedInstanceId = uiState.heartbeatSelectedInstanceId,
+                        isRefreshing = uiState.isRefreshingHeartbeat,
+                        onToggleHeartbeat = actions.onToggleHeartbeat,
+                        onChangeInterval = actions.onChangeHeartbeatInterval,
+                        onChangeActiveHours = actions.onChangeHeartbeatActiveHours,
+                        onSaveHeartbeatPrompt = actions.onSaveHeartbeatPrompt,
+                        onChangeHeartbeatService = actions.onChangeHeartbeatService,
+                        onRefresh = actions.onRefreshHeartbeat,
                     )
                 }
-            }
-        },
+                SettingsCard {
+                    DiagnosticsSection()
+                }
+                if (uiState.showEmailToggle) {
+                    SettingsCard {
+                        EmailSection(
+                            isEmailEnabled = uiState.isEmailEnabled,
+                            emailAccounts = uiState.emailAccounts,
+                            pollIntervalMinutes = uiState.emailPollIntervalMinutes,
+                            pendingCount = uiState.emailPendingCount,
+                            syncStates = uiState.emailSyncStates,
+                            refreshingAccountIds = uiState.refreshingEmailAccountIds,
+                            onToggleEmail = actions.onToggleEmail,
+                            onRemoveAccount = actions.onRemoveEmailAccount,
+                            onChangePollInterval = actions.onChangeEmailPollInterval,
+                            onRefreshAccount = actions.onRefreshEmailAccount,
+                        )
+                    }
+                }
+                if (uiState.showSmsSection) {
+                    SettingsCard {
+                        SmsSection(
+                            isSmsEnabled = uiState.isSmsEnabled,
+                            permissionGranted = uiState.smsPermissionGranted,
+                            pollIntervalMinutes = uiState.smsPollIntervalMinutes,
+                            pendingCount = uiState.smsPendingCount,
+                            syncState = uiState.smsSyncState,
+                            isRefreshing = uiState.isRefreshingSms,
+                            isSmsSendEnabled = uiState.isSmsSendEnabled,
+                            sendPermissionGranted = uiState.smsSendPermissionGranted,
+                            onToggleSms = actions.onToggleSms,
+                            onChangePollInterval = actions.onChangeSmsPollInterval,
+                            onRefresh = actions.onRefreshSms,
+                            onToggleSmsSend = actions.onToggleSmsSend,
+                        )
+                    }
+                }
+                if (uiState.showNotificationsSection) {
+                    SettingsCard {
+                        NotificationsSection(
+                            isEnabled = uiState.isNotificationsEnabled,
+                            accessGranted = uiState.notificationListenerAccessGranted,
+                            listenerBound = uiState.notificationListenerBound,
+                            pendingCount = uiState.notificationPendingCount,
+                            onToggle = actions.onToggleNotifications,
+                            onOpenAccessSettings = actions.onOpenNotificationListenerSettings,
+                            onClearPending = actions.onClearPendingNotifications,
+                        )
+                    }
+                }
+            },
         )
     }
 }
