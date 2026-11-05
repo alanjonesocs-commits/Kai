@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.data.Attachment
@@ -56,8 +57,8 @@ internal fun UserMessage(
                     .background(
                         Brush.linearGradient(
                             listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.17f),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                                Color(0xFF5A1018).copy(alpha = 0.34f),
+                                Color(0xFF2A0B12).copy(alpha = 0.28f),
                             ),
                         ),
                         RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp),
@@ -67,8 +68,8 @@ internal fun UserMessage(
                             1.dp,
                             Brush.linearGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.48f),
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f),
+                                    Color(0xFFFF5968).copy(alpha = 0.62f),
+                                    Color(0xFFB83248).copy(alpha = 0.42f),
                                 ),
                             ),
                         ),
@@ -114,7 +115,7 @@ internal fun UserMessage(
                                         modifier = Modifier.size(16.dp),
                                         painter = painterResource(Res.drawable.ic_file),
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        tint = Color(0xFFFF7883),
                                     )
                                 },
                                 label = { Text(truncateFileName(att.fileName ?: att.mimeType)) },
@@ -128,7 +129,7 @@ internal fun UserMessage(
                 if (message.isNotEmpty()) {
                     Text(
                         text = message,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = Color(0xFFFF7883),
                     )
                 }
             }
