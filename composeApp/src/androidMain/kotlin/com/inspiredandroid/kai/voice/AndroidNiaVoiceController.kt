@@ -88,24 +88,18 @@ class AndroidNiaVoiceController(
     override suspend fun speak(text: String) {
         val phrase = text.trim()
         if (phrase.isEmpty() || closed.get()) return
+        if (!piper.isInstalled) prepare()
         operationMutex.withLock {
             if (closed.get()) return@withLock
-            if (piper.isInstalled) {
-                try {
-                    piper.speak(phrase)
-                    runtime?.updateVoiceOutputStatus(NiaVoiceOutputStatus.PiperReady)
-                    return@withLock
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (error: Exception) {
-                    piper.stop()
-                    updateFallbackStatus(error.message, error)
-                    throw error
-                }
-            } else {
-                prepare()
+            try {
                 piper.speak(phrase)
                 runtime?.updateVoiceOutputStatus(NiaVoiceOutputStatus.PiperReady)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                piper.stop()
+                updateFallbackStatus(error.message, error)
+                throw error
             }
         }
     }
