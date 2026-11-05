@@ -17,9 +17,9 @@ import com.inspiredandroid.kai.permissionQualifier
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaSherpaModelInstaller
 import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
-import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaVoicePhase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -228,7 +228,6 @@ actual fun VoiceConversationControl(
         }
     }
 }
-
 
 private fun waveformLevel(samples: ShortArray): Float {
     if (samples.isEmpty()) return 0f

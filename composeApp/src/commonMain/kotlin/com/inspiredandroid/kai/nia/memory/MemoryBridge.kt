@@ -74,7 +74,7 @@ fun PamEpisode.toMemoryEntry(): MemoryEntry {
         sourceConversationId = sourceConversationId,
         provenance = provenance,
         providerShareAllowed = providerShareAllowed,
-)
+    )
 }
 
 fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBundle? = null): MemBundle {

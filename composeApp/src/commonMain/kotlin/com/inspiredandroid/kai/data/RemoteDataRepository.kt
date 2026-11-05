@@ -1817,12 +1817,14 @@ class RemoteDataRepository(
 
         val memoryInstructions = when {
             !memoryEnabled -> null
+
             variant == SystemPromptVariant.CHAT_REMOTE -> listOfNotNull(
                 appSettings.getMemoryInstructions().ifEmpty { null },
                 "Remote memory context is limited to entries Alan explicitly marked for provider sharing. " +
                     "Never reference or transmit local-only memories. Propose new memories for Alan's approval; " +
                     "do not claim a proposal is permanently saved until it is approved.",
             ).joinToString("\n")
+
             else -> appSettings.getMemoryInstructions().ifEmpty { null }
         }
 

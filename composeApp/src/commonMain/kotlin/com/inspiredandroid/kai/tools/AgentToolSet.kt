@@ -2,8 +2,8 @@ package com.inspiredandroid.kai.tools
 
 import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.EmailStore
-import com.inspiredandroid.kai.data.MemoryStore
 import com.inspiredandroid.kai.data.MemoryApprovalStore
+import com.inspiredandroid.kai.data.MemoryStore
 import com.inspiredandroid.kai.data.TaskStore
 import com.inspiredandroid.kai.mcp.McpServerManager
 import com.inspiredandroid.kai.network.tools.Tool

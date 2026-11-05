@@ -6,10 +6,10 @@ import com.inspiredandroid.kai.DaemonController
 import com.inspiredandroid.kai.Platform
 import com.inspiredandroid.kai.currentPlatform
 import com.inspiredandroid.kai.data.DataRepository
-import com.inspiredandroid.kai.data.MemoryStore
-import com.inspiredandroid.kai.data.MemoryApprovalStore
-import com.inspiredandroid.kai.data.PendingMemoryApproval
 import com.inspiredandroid.kai.data.ImportSection
+import com.inspiredandroid.kai.data.MemoryApprovalStore
+import com.inspiredandroid.kai.data.MemoryStore
+import com.inspiredandroid.kai.data.PendingMemoryApproval
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.data.TaskScheduler
 import com.inspiredandroid.kai.data.ThemeMode

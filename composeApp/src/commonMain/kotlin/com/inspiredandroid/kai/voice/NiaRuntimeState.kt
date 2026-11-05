@@ -53,9 +53,12 @@ class NiaRuntimeState {
         mutableState.update { current ->
             val effectivePhase = when {
                 phase == NiaVoicePhase.Idle && current.voiceSessionActive -> NiaVoicePhase.Listening
+
                 phase == NiaVoicePhase.Listening && !current.voiceSessionActive -> NiaVoicePhase.Idle
+
                 phase == NiaVoicePhase.Listening &&
                     current.voicePhase in setOf(NiaVoicePhase.Thinking, NiaVoicePhase.Speaking) -> current.voicePhase
+
                 else -> phase
             }
             current.copy(

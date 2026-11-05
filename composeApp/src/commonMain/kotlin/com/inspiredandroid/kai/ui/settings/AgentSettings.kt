@@ -323,11 +323,15 @@ private fun MemoryList(
     }
     val matchingMemories = remember(sortedMemories, searchQuery) {
         val query = searchQuery.trim()
-        if (query.isEmpty()) sortedMemories else sortedMemories.filter { memory ->
-            memory.key.contains(query, ignoreCase = true) ||
-                memory.content.contains(query, ignoreCase = true) ||
-                memory.source.orEmpty().contains(query, ignoreCase = true)
-        }.toImmutableList()
+        if (query.isEmpty()) {
+            sortedMemories
+        } else {
+            sortedMemories.filter { memory ->
+                memory.key.contains(query, ignoreCase = true) ||
+                    memory.content.contains(query, ignoreCase = true) ||
+                    memory.source.orEmpty().contains(query, ignoreCase = true)
+            }.toImmutableList()
+        }
     }
     val previewMemories = remember(matchingMemories) { matchingMemories.take(5).toImmutableList() }
 

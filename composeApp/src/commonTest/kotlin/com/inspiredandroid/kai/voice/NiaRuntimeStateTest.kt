@@ -47,6 +47,7 @@ class NiaRuntimeStateTest {
         runtime.setWaveformAmplitude(1.4f)
         assertEquals(1f, runtime.state.value.waveformAmplitude)
     }
+
     @Test
     fun microphoneListeningCallbacksDoNotOverrideThinkingOrSpeaking() {
         val runtime = NiaRuntimeState()
