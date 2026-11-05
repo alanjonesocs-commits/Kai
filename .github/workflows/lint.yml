@@ -6,6 +6,7 @@ on:
       - main
       - test/lint-workflow
       - build/nia15-full-duplex-wakeword
+      - nia15/futuristic-interface
   pull_request:
     branches:
       - main
