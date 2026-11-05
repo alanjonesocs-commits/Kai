@@ -590,6 +590,7 @@ private fun ChatModeScreen(
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 textToSpeech = textToSpeech,
+                niaVoiceController = niaVoiceController,
                 isSpeechOutputEnabled = uiState.isSpeechOutputEnabled,
                 isSpeaking = uiState.isSpeaking,
                 actions = uiState.actions,
@@ -874,6 +875,7 @@ private fun ChatModeScreen(
                                                     BotMessage(
                                                         message = history.content,
                                                         textToSpeech = textToSpeech,
+                                                        niaVoiceController = niaVoiceController,
                                                         isSpeaking = uiState.isSpeaking && uiState.isSpeakingContentId == history.id,
                                                         setIsSpeaking = {
                                                             uiState.actions.setIsSpeaking(it, history.id)
