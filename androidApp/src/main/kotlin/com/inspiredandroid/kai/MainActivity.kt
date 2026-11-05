@@ -31,8 +31,8 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
 import nl.marc_apps.tts.TextToSpeechEngine
 import nl.marc_apps.tts.TextToSpeechFactory
-import nl.marc_apps.tts.TextToSpeechInstance
 import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
+import nl.marc_apps.tts.TextToSpeechInstance
 import org.koin.android.ext.android.get
 
 class MainActivity : ComponentActivity() {
