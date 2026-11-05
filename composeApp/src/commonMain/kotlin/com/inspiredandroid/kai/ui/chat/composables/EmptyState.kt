@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,9 +37,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
 import com.inspiredandroid.kai.ui.handCursor
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.kai_build_open
 import kai.composeapp.generated.resources.privacy_agree_prefix
@@ -49,7 +50,6 @@ import kai.composeapp.generated.resources.start_interactive_ui
 import kai.composeapp.generated.resources.welcome_message
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import com.inspiredandroid.kai.voice.NiaRuntimeState
 
 private val TerminalGreenOnDark = Color(0xFF16C60C)
 private val TerminalGreenOnLight = Color(0xFF13A10E)
