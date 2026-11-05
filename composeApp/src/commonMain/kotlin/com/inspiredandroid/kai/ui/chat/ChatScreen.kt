@@ -86,6 +86,8 @@ import com.inspiredandroid.kai.ui.chat.composables.BotMessage
 import com.inspiredandroid.kai.ui.chat.composables.ChatHistorySheet
 import com.inspiredandroid.kai.ui.chat.composables.CircleIconButton
 import com.inspiredandroid.kai.ui.chat.composables.EmptyState
+import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaVoicePhase
 import com.inspiredandroid.kai.ui.chat.composables.ErrorMessage
 import com.inspiredandroid.kai.ui.chat.composables.FreeProviderSuggestionsPanel
 import com.inspiredandroid.kai.ui.chat.composables.HeartbeatBanner
@@ -131,6 +133,7 @@ import nl.marc_apps.tts.TextToSpeechInstance
 import nl.marc_apps.tts.errors.TextToSpeechSynthesisInterruptedError
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -144,6 +147,17 @@ fun ChatScreen(
     navigationTabBar: (@Composable () -> Unit)? = null,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val niaRuntime = koinInject<NiaRuntimeState>()
+
+    LaunchedEffect(uiState.isLoading, uiState.isSpeaking) {
+        niaRuntime.setVoicePhase(
+            when {
+                uiState.isSpeaking -> NiaVoicePhase.Speaking
+                uiState.isLoading -> NiaVoicePhase.Thinking
+                else -> NiaVoicePhase.Idle
+            },
+        )
+    }
 
     ChatScreenContent(
         uiState = uiState,
