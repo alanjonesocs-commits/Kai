@@ -41,11 +41,13 @@ jobs:
           sdkmanager "build-tools;36.0.0"
           sdkmanager "build-tools;29.0.3"
 
-      - name: Set Gradle permissions
-        run: chmod +x ./gradlew
+      - name: Set up Gradle 9.8.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.8.2"
 
       - name: Apply Kotlin formatting
-        run: ./gradlew spotlessApply --no-daemon --stacktrace
+        run: gradle spotlessApply --no-daemon --stacktrace
 
       - name: Verify Kotlin formatting
         run: ./gradlew spotlessCheck --no-daemon --stacktrace
