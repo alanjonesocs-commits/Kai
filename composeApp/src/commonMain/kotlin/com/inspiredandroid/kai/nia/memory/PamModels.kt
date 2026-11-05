@@ -30,6 +30,7 @@ data class PamEpisode(
     val resolutionStatus: String? = null,
     val sourceConversationId: String? = null,
     val provenance: List<MemoryProvenance> = emptyList(),
+    val providerShareAllowed: Boolean = false,
     val deletedAt: String? = null,
     val extra: Map<String, String> = emptyMap(),
 )
