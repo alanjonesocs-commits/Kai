@@ -50,10 +50,12 @@ class NiaRuntimeState {
     /** Conversation phases may override Listening while the active voice session is processing. */
     fun setVoicePhase(phase: NiaVoicePhase) {
         mutableState.update { current ->
-            val effectivePhase = if (phase == NiaVoicePhase.Idle && current.voiceSessionActive) {
-                NiaVoicePhase.Listening
-            } else {
-                phase
+            val effectivePhase = when {
+                phase == NiaVoicePhase.Idle && current.voiceSessionActive -> NiaVoicePhase.Listening
+                phase == NiaVoicePhase.Listening && !current.voiceSessionActive -> NiaVoicePhase.Idle
+                phase == NiaVoicePhase.Listening &&
+                    current.voicePhase in setOf(NiaVoicePhase.Thinking, NiaVoicePhase.Speaking) -> current.voicePhase
+                else -> phase
             }
             current.copy(
                 voicePhase = effectivePhase,
