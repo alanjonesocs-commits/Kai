@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.data.HeartbeatLogEntry
 import com.inspiredandroid.kai.data.MemoryEntry
+import com.inspiredandroid.kai.data.PendingMemoryApproval
 import com.inspiredandroid.kai.data.ScheduledTask
 import com.inspiredandroid.kai.data.TaskTrigger
 import com.inspiredandroid.kai.ui.KaiOutlinedTextField
@@ -109,8 +111,12 @@ internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
             SettingsCard {
                 MemoryList(
                     memories = uiState.memories,
+                    pendingApprovals = uiState.pendingMemoryApprovals,
                     onDeleteMemory = actions.onDeleteMemory,
                     onUpdateMemory = actions.onUpdateMemory,
+                    onApproveMemory = actions.onApproveMemory,
+                    onRejectMemory = actions.onRejectMemory,
+                    onToggleProviderShare = actions.onToggleMemoryProviderShare,
                     isMemoryEnabled = uiState.isMemoryEnabled,
                     onToggleMemory = actions.onToggleMemory,
                 )
@@ -299,18 +305,31 @@ private fun SoulEditor(
 @Composable
 private fun MemoryList(
     memories: ImmutableList<MemoryEntry>,
+    pendingApprovals: ImmutableList<PendingMemoryApproval>,
     onDeleteMemory: (String) -> Unit,
     onUpdateMemory: (String, String) -> Unit,
+    onApproveMemory: (String) -> Unit,
+    onRejectMemory: (String) -> Unit,
+    onToggleProviderShare: (String, Boolean) -> Unit,
     isMemoryEnabled: Boolean,
     onToggleMemory: (Boolean) -> Unit,
 ) {
     var showAllDialog by remember { mutableStateOf(false) }
     var editingMemory by remember { mutableStateOf<MemoryEntry?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
 
     val sortedMemories = remember(memories) {
         memories.sortedByDescending { it.updatedAt }.toImmutableList()
     }
-    val previewMemories = remember(sortedMemories) { sortedMemories.take(5).toImmutableList() }
+    val matchingMemories = remember(sortedMemories, searchQuery) {
+        val query = searchQuery.trim()
+        if (query.isEmpty()) sortedMemories else sortedMemories.filter { memory ->
+            memory.key.contains(query, ignoreCase = true) ||
+                memory.content.contains(query, ignoreCase = true) ||
+                memory.source.orEmpty().contains(query, ignoreCase = true)
+        }.toImmutableList()
+    }
+    val previewMemories = remember(matchingMemories) { matchingMemories.take(5).toImmutableList() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         ToggleableHeadline(
@@ -321,7 +340,45 @@ private fun MemoryList(
         )
         Spacer(Modifier.height(12.dp))
 
+        if (pendingApprovals.isNotEmpty()) {
+            Text(
+                text = "PENDING APPROVAL  /  ${pendingApprovals.size}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(8.dp))
+            pendingApprovals.forEach { proposal ->
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(proposal.key, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    Spacer(Modifier.height(2.dp))
+                    Text(proposal.content, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = if (proposal.isSensitive) "Sensitive candidate · local-only · not saved" else "Local-only · not saved",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onApproveMemory(proposal.id) }, modifier = Modifier.handCursor()) {
+                            Text("Approve & save")
+                        }
+                        TextButton(onClick = { onRejectMemory(proposal.id) }, modifier = Modifier.handCursor()) {
+                            Text("Reject")
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+
         if (isMemoryEnabled) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Search stored memories") },
+            )
+            Spacer(Modifier.height(8.dp))
             previewMemories.forEach { memory ->
                 SettingsListItem(
                     title = memory.key,
@@ -333,12 +390,19 @@ private fun MemoryList(
                 )
                 Spacer(Modifier.height(8.dp))
             }
-            if (sortedMemories.size > previewMemories.size) {
+            if (matchingMemories.isEmpty()) {
+                Text(
+                    text = if (searchQuery.isBlank()) "No approved memories yet." else "No memories match this search.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (matchingMemories.size > previewMemories.size) {
                 OutlinedButton(
                     onClick = { showAllDialog = true },
                     modifier = Modifier.align(CenterHorizontally).handCursor(),
                 ) {
-                    Text(stringResource(Res.string.settings_memories_show_all, sortedMemories.size))
+                    Text(stringResource(Res.string.settings_memories_show_all, matchingMemories.size))
                 }
             }
         }
@@ -346,7 +410,7 @@ private fun MemoryList(
 
     if (showAllDialog) {
         AllMemoriesSheet(
-            memories = sortedMemories,
+            memories = matchingMemories,
             onDismiss = { showAllDialog = false },
             onDeleteMemory = onDeleteMemory,
             onEditMemory = { editingMemory = it },
@@ -361,6 +425,7 @@ private fun MemoryList(
                 onUpdateMemory(memory.id, newContent)
                 editingMemory = null
             },
+            onToggleProviderShare = onToggleProviderShare,
         )
     }
 }
@@ -410,8 +475,10 @@ private fun EditMemorySheet(
     memory: MemoryEntry,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
+    onToggleProviderShare: (String, Boolean) -> Unit,
 ) {
     var content by remember(memory.id) { mutableStateOf(memory.content) }
+    var providerShareAllowed by remember(memory.id) { mutableStateOf(memory.providerShareAllowed) }
     val hasChanges = content != memory.content && content.isNotBlank()
 
     ModalBottomSheet(
@@ -455,6 +522,16 @@ private fun EditMemorySheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.height(12.dp))
+            ToggleableHeadline(
+                title = "Allow provider sharing",
+                description = "Off by default. Enable only when you explicitly want this memory included in connected cloud-provider prompts.",
+                checked = providerShareAllowed,
+                onCheckedChange = { allowed ->
+                    providerShareAllowed = allowed
+                    onToggleProviderShare(memory.id, allowed)
+                },
+            )
             Spacer(Modifier.height(8.dp))
             KaiOutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
