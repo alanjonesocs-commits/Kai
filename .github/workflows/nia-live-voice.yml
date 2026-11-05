@@ -42,14 +42,31 @@ jobs:
           sdkmanager "build-tools;36.0.0"
           sdkmanager "build-tools;29.0.3"
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.8.2"
+
       - name: Grant Gradle wrapper permission
         run: chmod +x ./gradlew
 
       - name: Run common desktop test suite
-        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew :composeApp:desktopTest --no-daemon --stacktrace && exit 0
+            echo "Desktop tests failed on attempt $attempt; retrying after Gradle/network transient failure..."
+            sleep 15
+          done
+          exit 1
 
       - name: Compile Android FOSS debug APK
-        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace && exit 0
+            echo "Android build failed on attempt $attempt; retrying after Gradle/network transient failure..."
+            sleep 15
+          done
+          exit 1
 
       - name: Upload Pixel installation APK
         uses: actions/upload-artifact@v4
