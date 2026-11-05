@@ -80,6 +80,7 @@ import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.github_mark
 import kai.composeapp.generated.resources.settings_ai_mistakes_warning
@@ -104,6 +105,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 internal val StatusColorConnected = Color(0xFF4CAF50)
@@ -120,6 +122,16 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
+    val niaRuntime = koinInject<NiaRuntimeState>()
+
+    LaunchedEffect(uiState.memories, uiState.configuredServices, uiState.localImportedModels) {
+        niaRuntime.updateMemoryStatus(uiState.memories.size)
+        niaRuntime.updateSystemStatus(
+            configuredProviders = uiState.configuredServices.size,
+            connectedProviders = uiState.configuredServices.count { it.connectionStatus == ConnectionStatus.Connected },
+            localModels = uiState.localImportedModels.size,
+        )
+    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
