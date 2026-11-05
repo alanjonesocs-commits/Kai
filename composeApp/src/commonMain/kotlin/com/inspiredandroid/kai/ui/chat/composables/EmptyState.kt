@@ -67,7 +67,7 @@ internal fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "N I A  •  PERSONAL AI",
+            text = "N I A  /  NATURAL INTELLIGENCE ASSISTANT",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
             color = MaterialTheme.colorScheme.primary,
         )
@@ -75,7 +75,7 @@ internal fun EmptyState(
         HolographicBrain()
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "NEURAL CORE  /  HOLOGRAPHIC DISPLAY",
+            text = "SENTIENT INTERFACE  •  LOCAL SIGNAL ACTIVE",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
             color = MaterialTheme.colorScheme.secondary,
         )
