@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.inspiredandroid.kai.ui.dynamicui.FrozenSubmission
@@ -45,8 +46,9 @@ fun MarkdownContent(
     isInteractive: Boolean = false,
     onUiCallback: (event: String, data: Map<String, String>) -> Unit = { _, _ -> },
     frozen: FrozenSubmission? = null,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+    CompositionLocalProvider(LocalContentColor provides contentColor) {
         Column(modifier) {
             for (block in document.blocks) {
                 BlockRenderer(block, isInteractive, onUiCallback, frozen)
@@ -62,13 +64,14 @@ fun MarkdownContent(
     isInteractive: Boolean = false,
     onUiCallback: (event: String, data: Map<String, String>) -> Unit = { _, _ -> },
     frozen: FrozenSubmission? = null,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     val doc = remember(content) {
         runCatching { parseMarkdown(content) }.getOrElse {
             MarkdownDocument(persistentListOf(Paragraph(persistentListOf(com.inspiredandroid.kai.ui.markdown.Text(content)))))
         }
     }
-    MarkdownContent(doc, modifier, isInteractive, onUiCallback, frozen)
+    MarkdownContent(doc, modifier, isInteractive, onUiCallback, frozen, contentColor)
 }
 
 @Composable
