@@ -5,6 +5,7 @@ import com.inspiredandroid.kai.data.EmailAccount
 import com.inspiredandroid.kai.data.EmailSyncState
 import com.inspiredandroid.kai.data.HeartbeatLogEntry
 import com.inspiredandroid.kai.data.MemoryEntry
+import com.inspiredandroid.kai.data.PendingMemoryApproval
 import com.inspiredandroid.kai.data.ScheduledTask
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.data.ServiceEntry
@@ -72,6 +73,7 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.System,
     val isMemoryEnabled: Boolean = true,
     val memories: ImmutableList<MemoryEntry> = persistentListOf(),
+    val pendingMemoryApprovals: ImmutableList<PendingMemoryApproval> = persistentListOf(),
     val isSchedulingEnabled: Boolean = true,
     val scheduledTasks: ImmutableList<ScheduledTask> = persistentListOf(),
     val isDaemonEnabled: Boolean = false,
