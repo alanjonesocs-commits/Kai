@@ -279,6 +279,9 @@ class SettingsViewModel(
     }
 
     fun onScreenVisible() {
+        memoryApprovalStore?.let { approvals ->
+            _state.update { it.copy(pendingMemoryApprovals = approvals.getPendingApprovals().toImmutableList()) }
+        }
         if (!hasCheckedInitialConnection) {
             hasCheckedInitialConnection = true
             checkAllConnections()
