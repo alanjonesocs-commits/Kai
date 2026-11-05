@@ -214,13 +214,13 @@ internal fun ExportImportSection(
 
     Spacer(Modifier.height(24.dp))
     Text(
-        text = "NIA Portable Memory",
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onBackground,
+        text = "MEMORY VAULT  /  NIA PORTABLE ARCHIVE",
+        style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.1.dp),
+        color = MaterialTheme.colorScheme.primary,
     )
     Spacer(Modifier.height(4.dp))
     Text(
-        text = "Export or import NIA memory as a portable .mem bundle.",
+        text = "USER-CONTROLLED MEMORY TRANSFER  •  PORTABLE .MEM ARCHIVE",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
