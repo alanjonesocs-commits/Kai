@@ -46,4 +46,29 @@ class NiaRuntimeStateTest {
         runtime.setWaveformAmplitude(1.4f)
         assertEquals(1f, runtime.state.value.waveformAmplitude)
     }
+    @Test
+    fun microphoneListeningCallbacksDoNotOverrideThinkingOrSpeaking() {
+        val runtime = NiaRuntimeState()
+        runtime.setVoiceSessionActive(true)
+
+        runtime.setVoicePhase(NiaVoicePhase.Thinking)
+        runtime.setVoicePhase(NiaVoicePhase.Listening)
+        assertEquals(NiaVoicePhase.Thinking, runtime.state.value.voicePhase)
+
+        runtime.setVoicePhase(NiaVoicePhase.Speaking)
+        runtime.setVoicePhase(NiaVoicePhase.Listening)
+        assertEquals(NiaVoicePhase.Speaking, runtime.state.value.voicePhase)
+    }
+
+    @Test
+    fun lateListeningCallbackCannotRestartAnEndedSession() {
+        val runtime = NiaRuntimeState()
+        runtime.setVoiceSessionActive(true)
+        runtime.setVoiceSessionActive(false)
+        runtime.setVoicePhase(NiaVoicePhase.Listening)
+
+        assertEquals(NiaVoicePhase.Idle, runtime.state.value.voicePhase)
+        assertEquals(false, runtime.state.value.voiceSessionActive)
+    }
+
 }
