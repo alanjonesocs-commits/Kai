@@ -1821,7 +1821,15 @@ class RemoteDataRepository(
             null
         }
 
-        val memories = if (memoryEnabled) memoryStore.getAllMemories() else emptyList()
+        val memories = if (!memoryEnabled) {
+            emptyList()
+        } else if (variant == SystemPromptVariant.CHAT_REMOTE) {
+            // Provider transmission is deny-by-default. Only entries explicitly marked
+            // shareable by the user may leave the device; local models retain full retrieval.
+            memoryStore.getProviderShareableMemories()
+        } else {
+            memoryStore.getAllMemories()
+        }
         val byCategory = memories.groupBy { it.category }
 
         val tasksSplit = if (schedulingEnabled) taskStore.getPendingTasksPartitioned() else PendingTaskPartition(emptyList(), emptyList())
@@ -1945,6 +1953,10 @@ class RemoteDataRepository(
 
     override suspend fun updateMemoryContent(id: String, content: String) {
         memoryStore.updateContentById(id, content)
+    }
+
+    override suspend fun setMemoryProviderShareAllowed(id: String, allowed: Boolean) {
+        memoryStore.updateProviderShareById(id, allowed)
     }
 
     override fun isSchedulingEnabled(): Boolean = appSettings.isSchedulingEnabled()

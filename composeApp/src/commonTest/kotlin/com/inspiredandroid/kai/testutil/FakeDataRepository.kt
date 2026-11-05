@@ -429,6 +429,13 @@ class FakeDataRepository : DataRepository {
         }
     }
 
+    override suspend fun setMemoryProviderShareAllowed(id: String, allowed: Boolean) {
+        val index = memories.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            memories[index] = memories[index].copy(providerShareAllowed = allowed)
+        }
+    }
+
     // Scheduling management
     private var schedulingEnabled = true
     private val scheduledTasks = mutableListOf<ScheduledTask>()

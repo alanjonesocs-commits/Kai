@@ -6,6 +6,7 @@ import com.inspiredandroid.kai.data.DataRepository
 import com.inspiredandroid.kai.data.EmailStore
 import com.inspiredandroid.kai.data.HeartbeatManager
 import com.inspiredandroid.kai.data.MemoryStore
+import com.inspiredandroid.kai.data.MemoryApprovalStore
 import com.inspiredandroid.kai.data.NotificationStore
 import com.inspiredandroid.kai.data.RemoteDataRepository
 import com.inspiredandroid.kai.data.SmsDraftStore
@@ -74,6 +75,9 @@ val appModule = module {
     }
     single<MemoryStore> {
         MemoryStore(get())
+    }
+    single<MemoryApprovalStore> {
+        MemoryApprovalStore(get())
     }
     single<TaskStore> {
         TaskStore(get())
@@ -157,7 +161,17 @@ val appModule = module {
     single<DaemonController> { createDaemonController() }
     single<SandboxController> { createSandboxController() }
     single<KaiBuildController> { createKaiBuildController() }
-    viewModel { SettingsViewModel(get<DataRepository>(), get<DaemonController>(), get(permissionQualifier(AppPermission.POST_NOTIFICATIONS)), get<TaskScheduler>(), localNetworkPermissionController = get(permissionQualifier(AppPermission.LOCAL_NETWORK))) }
+    viewModel {
+        SettingsViewModel(
+            dataRepository = get<DataRepository>(),
+            daemonController = get<DaemonController>(),
+            notificationPermissionController = get(permissionQualifier(AppPermission.POST_NOTIFICATIONS)),
+            taskScheduler = get<TaskScheduler>(),
+            localNetworkPermissionController = get(permissionQualifier(AppPermission.LOCAL_NETWORK)),
+            memoryStore = get<MemoryStore>(),
+            memoryApprovalStore = get<MemoryApprovalStore>(),
+        )
+    }
     viewModel { SandboxViewModel(get<DataRepository>(), get<SandboxController>()) }
     viewModel { SandboxFileBrowserViewModel(get<SandboxController>()) }
     viewModel { SandboxPackagesViewModel(get<SandboxController>()) }

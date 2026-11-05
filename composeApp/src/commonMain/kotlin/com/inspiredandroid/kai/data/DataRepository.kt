@@ -102,6 +102,7 @@ interface DataRepository {
     fun getMemories(): List<MemoryEntry>
     suspend fun deleteMemory(id: String)
     suspend fun updateMemoryContent(id: String, content: String)
+    suspend fun setMemoryProviderShareAllowed(id: String, allowed: Boolean)
 
     // Scheduling management
     fun isSchedulingEnabled(): Boolean
