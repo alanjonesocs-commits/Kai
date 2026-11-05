@@ -81,6 +81,7 @@ import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors
+import com.inspiredandroid.kai.voice.NiaInteractionKind
 import com.inspiredandroid.kai.voice.NiaRuntimeSnapshot
 import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaVoiceController
@@ -134,6 +135,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val onPrepareAndTestVoice: (() -> Unit)? = niaVoiceController?.let { controller ->
         {
+            niaRuntime.signalInteraction(NiaInteractionKind.SystemAction)
             scope.launch {
                 try {
                     controller.prepare()

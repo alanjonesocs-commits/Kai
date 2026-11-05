@@ -51,7 +51,11 @@ val KAI_BUILD_FILES = named("kaiBuildFiles")
 fun permissionQualifier(permission: AppPermission) = named(permission.name)
 
 val appModule = module {
-    single { NiaRuntimeState() }
+    single {
+        NiaRuntimeState().also { runtime ->
+            runtime.updateMemoryStatus(get<MemoryStore>().getAllMemories().size)
+        }
+    }
     AppPermission.entries.forEach { permission ->
         single(permissionQualifier(permission)) { PermissionController(permission) }
     }
@@ -170,6 +174,7 @@ val appModule = module {
             localNetworkPermissionController = get(permissionQualifier(AppPermission.LOCAL_NETWORK)),
             memoryStore = get<MemoryStore>(),
             memoryApprovalStore = get<MemoryApprovalStore>(),
+            niaRuntime = get<NiaRuntimeState>(),
         )
     }
     viewModel { SandboxViewModel(get<DataRepository>(), get<SandboxController>()) }

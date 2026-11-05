@@ -36,6 +36,8 @@ import com.inspiredandroid.kai.network.dtos.SponsorsResponseDto
 import com.inspiredandroid.kai.skills.parseGitHubSkillUrl
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
+import com.inspiredandroid.kai.voice.NiaInteractionKind
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.tools.isLocalNetworkUrl
 import io.github.vinceglb.filekit.PlatformFile
 import io.ktor.client.call.body
@@ -75,6 +77,7 @@ class SettingsViewModel(
     private val localNetworkPermissionController: PermissionController = PermissionController(AppPermission.LOCAL_NETWORK),
     private val memoryStore: MemoryStore? = null,
     private val memoryApprovalStore: MemoryApprovalStore? = null,
+    private val niaRuntime: NiaRuntimeState? = null,
 ) : ViewModel() {
 
     private var connectionCheckJobs: MutableMap<String, Job> = mutableMapOf()
@@ -522,6 +525,7 @@ class SettingsViewModel(
 
     private fun onToggleMemory(enabled: Boolean) {
         dataRepository.setMemoryEnabled(enabled)
+        niaRuntime?.signalInteraction(NiaInteractionKind.MemorySettingsChanged)
         _state.update { it.copy(isMemoryEnabled = enabled) }
     }
 
@@ -537,6 +541,7 @@ class SettingsViewModel(
     private fun onUpdateMemory(id: String, content: String) {
         viewModelScope.launch(backgroundDispatcher) {
             dataRepository.updateMemoryContent(id, content)
+            niaRuntime?.signalInteraction(NiaInteractionKind.MemoryUpdated)
             _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
         }
     }
@@ -545,7 +550,8 @@ class SettingsViewModel(
         val approvals = memoryApprovalStore ?: return
         val store = memoryStore ?: return
         viewModelScope.launch(backgroundDispatcher) {
-            approvals.approve(id, store)
+            val saved = approvals.approve(id, store)
+            if (saved != null) niaRuntime?.signalInteraction(NiaInteractionKind.MemoryApproved)
             _state.update {
                 it.copy(
                     memories = dataRepository.getMemories().toImmutableList(),
@@ -558,7 +564,7 @@ class SettingsViewModel(
     private fun onRejectMemory(id: String) {
         val approvals = memoryApprovalStore ?: return
         viewModelScope.launch(backgroundDispatcher) {
-            approvals.reject(id)
+            if (approvals.reject(id)) niaRuntime?.signalInteraction(NiaInteractionKind.MemoryRejected)
             _state.update { it.copy(pendingMemoryApprovals = approvals.getPendingApprovals().toImmutableList()) }
         }
     }
@@ -566,6 +572,7 @@ class SettingsViewModel(
     private fun onToggleMemoryProviderShare(id: String, allowed: Boolean) {
         viewModelScope.launch(backgroundDispatcher) {
             dataRepository.setMemoryProviderShareAllowed(id, allowed)
+            niaRuntime?.signalInteraction(NiaInteractionKind.MemoryPrivacyUpdated)
             _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
         }
     }
@@ -846,7 +853,11 @@ class SettingsViewModel(
         _state.update { it.copy(uiScale = scale) }
     }
 
-    private fun onExportSettings(sections: Set<ImportSection>): String = dataRepository.exportSettingsToJson(sections)
+    private fun onExportSettings(sections: Set<ImportSection>): String {
+        val exported = dataRepository.exportSettingsToJson(sections)
+        niaRuntime?.signalInteraction(NiaInteractionKind.SettingsExported)
+        return exported
+    }
 
     private fun onPrepareExport(): Map<ImportSection, String?> = dataRepository.getExportPreview()
 
@@ -860,6 +871,7 @@ class SettingsViewModel(
         _state.value = buildFullState().copy(currentTab = currentTab)
         checkAllConnections()
         connectEnabledMcpServers()
+        niaRuntime?.signalInteraction(NiaInteractionKind.SettingsImported)
         if (errors == 0) ImportResult.Success else ImportResult.PartialSuccess(errors)
     } catch (_: Exception) {
         ImportResult.Failure
@@ -1082,6 +1094,7 @@ class SettingsViewModel(
         when (deletion) {
             is PendingDeletion.Memory -> {
                 dataRepository.deleteMemory(deletion.id)
+                niaRuntime?.signalInteraction(NiaInteractionKind.MemoryDeleted)
                 _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
             }
 

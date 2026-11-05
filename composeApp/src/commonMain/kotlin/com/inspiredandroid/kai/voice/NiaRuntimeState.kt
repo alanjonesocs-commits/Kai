@@ -31,6 +31,28 @@ enum class NiaSpeechRecognitionStatus {
     Error,
 }
 
+enum class NiaInteractionKind {
+    UserInteraction,
+    ConversationUpdated,
+    VoiceTranscript,
+    VoiceSessionStarted,
+    VoiceSessionEnded,
+    MemorySettingsChanged,
+    MemoryApproved,
+    MemoryRejected,
+    MemoryUpdated,
+    MemoryDeleted,
+    MemoryPrivacyUpdated,
+    SettingsExported,
+    SettingsImported,
+    SystemAction,
+}
+
+data class NiaInteractionEvent(
+    val sequence: Long,
+    val kind: NiaInteractionKind,
+)
+
 data class NiaRuntimeSnapshot(
     val voicePhase: NiaVoicePhase = NiaVoicePhase.Idle,
     val voiceSessionActive: Boolean = false,
@@ -45,6 +67,7 @@ data class NiaRuntimeSnapshot(
     val connectedProviderCount: Int? = null,
     val localModelCount: Int? = null,
     val lastInteraction: Long = 0L,
+    val interactionEvents: List<NiaInteractionEvent> = emptyList(),
 )
 
 class NiaRuntimeState {
@@ -131,8 +154,22 @@ class NiaRuntimeState {
         }
     }
 
-    /** Shared interaction pulse; surfaces can observe this sequence to animate in sync. */
-    fun signalInteraction() {
-        mutableState.update { it.copy(lastInteraction = it.lastInteraction + 1L) }
+    /**
+     * Records a privacy-safe event sequence for shared UI feedback and diagnostics.
+     * Event payloads deliberately contain no message text or memory contents.
+     */
+    fun signalInteraction(kind: NiaInteractionKind = NiaInteractionKind.UserInteraction) {
+        mutableState.update { current ->
+            val sequence = current.lastInteraction + 1L
+            current.copy(
+                lastInteraction = sequence,
+                interactionEvents = (current.interactionEvents + NiaInteractionEvent(sequence, kind))
+                    .takeLast(MAX_INTERACTION_EVENTS),
+            )
+        }
+    }
+
+    private companion object {
+        const val MAX_INTERACTION_EVENTS = 24
     }
 }

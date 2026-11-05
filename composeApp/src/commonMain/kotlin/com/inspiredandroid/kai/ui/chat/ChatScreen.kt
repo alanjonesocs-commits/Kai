@@ -110,6 +110,7 @@ import com.inspiredandroid.kai.ui.markdown.parseMarkdown
 import com.inspiredandroid.kai.ui.sandbox.SandboxTabsContent
 import com.inspiredandroid.kai.ui.settings.SandboxUiState
 import com.inspiredandroid.kai.ui.settings.SandboxViewModel
+import com.inspiredandroid.kai.voice.NiaInteractionKind
 import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaVoiceController
 import com.inspiredandroid.kai.voice.NiaVoicePhase
@@ -163,7 +164,9 @@ fun ChatScreen(
     }
 
     LaunchedEffect(uiState.history.size) {
-        if (uiState.history.isNotEmpty()) niaRuntime.signalInteraction()
+        if (uiState.history.isNotEmpty()) {
+            niaRuntime.signalInteraction(NiaInteractionKind.ConversationUpdated)
+        }
     }
 
     ChatScreenContent(

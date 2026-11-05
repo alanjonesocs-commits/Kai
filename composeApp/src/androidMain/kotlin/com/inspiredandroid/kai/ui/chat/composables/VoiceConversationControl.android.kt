@@ -17,16 +17,21 @@ import com.inspiredandroid.kai.permissionQualifier
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
+import com.inspiredandroid.kai.voice.NiaInteractionKind
 import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaSherpaModelInstaller
 import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
 import com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus
 import com.inspiredandroid.kai.voice.NiaVoicePhase
+import com.inspiredandroid.kai.voice.PcmFrameBatcher
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,7 +41,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.sqrt
 
-private const val PCM_QUEUE_CAPACITY = 25
+private const val PCM_QUEUE_CAPACITY = 5
+private const val PCM_FRAME_SAMPLES = 320
+private const val PCM_FRAMES_PER_BATCH = 5
+private const val PCM_BATCH_DURATION_NANOS = 100_000_000L
 
 @Composable
 actual fun VoiceConversationControl(
@@ -61,10 +69,12 @@ actual fun VoiceConversationControl(
     IconButton(
         onClick = {
             if (active) {
+                runtime.signalInteraction(NiaInteractionKind.VoiceSessionEnded)
                 onActiveChange(false)
             } else {
                 scope.launch {
                     if (permissionController.requestPermission()) {
+                        runtime.signalInteraction(NiaInteractionKind.VoiceSessionStarted)
                         onActiveChange(true)
                     } else {
                         Toast.makeText(
@@ -92,6 +102,15 @@ actual fun VoiceConversationControl(
         var audioEngine: NiaAndroidAudioEngine? = null
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
         var recognizerWorker: Job? = null
+        var workerScope: CoroutineScope? = null
+        val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
+        val batcher = PcmFrameBatcher(
+            frameSamples = PCM_FRAME_SAMPLES,
+            framesPerBatch = PCM_FRAMES_PER_BATCH,
+        )
+        val recognitionFailureReported = AtomicBoolean(false)
+        val queuedBatches = AtomicInteger(0)
+        val lastSlowBatchDiagnosticNanos = AtomicLong(0L)
         try {
             NiaDiagnostics.record("INFO", "voice", "session_start", "Starting local voice session.")
             // The first voice session downloads the pinned ~43 MB model into app-private
@@ -108,7 +127,7 @@ actual fun VoiceConversationControl(
                     onPartialTranscript = { /* Retained for future live captions. */ },
                     onFinalTranscript = { transcript ->
                         scope.launch {
-                            runtime.signalInteraction()
+                            runtime.signalInteraction(NiaInteractionKind.VoiceTranscript)
                             latestOnRecognized.value(transcript)
                         }
                     },
@@ -117,32 +136,33 @@ actual fun VoiceConversationControl(
             streamingRecognizer = recognizer
             runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Ready)
 
-            // Keep native inference off the real-time microphone thread. Sherpa calls
-            // must remain serial, so one worker drains this bounded FIFO in order.
-            // At 20 ms per frame, 25 frames cap queued audio at 500 ms.
-            val pcmFrames = Channel<ShortArray>(capacity = PCM_QUEUE_CAPACITY)
-            val recognitionFailureReported = AtomicBoolean(false)
-            val queuedFrames = AtomicInteger(0)
-            val lastSlowFrameDiagnosticNanos = AtomicLong(0L)
-            recognizerWorker = launch(Dispatchers.Default) {
+            // Native Zipformer inference stays serial and off the AudioRecord callback.
+            // Five 20 ms capture frames form one 100 ms recognizer batch. Five queued
+            // batches retain the existing 500 ms upper bound without per-frame dispatch.
+            val inferenceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            workerScope = inferenceScope
+            recognizerWorker = inferenceScope.launch {
                 try {
                     for (samples in pcmFrames) {
-                        queuedFrames.decrementAndGet()
+                        queuedBatches.decrementAndGet()
                         val inferenceStarted = System.nanoTime()
                         recognizer.acceptPcm16(samples)
                         val inferenceDuration = System.nanoTime() - inferenceStarted
                         val now = System.nanoTime()
-                        val lastDiagnostic = lastSlowFrameDiagnosticNanos.get()
-                        if ((inferenceDuration > 20_000_000L || queuedFrames.get() >= PCM_QUEUE_CAPACITY / 2) &&
+                        val lastDiagnostic = lastSlowBatchDiagnosticNanos.get()
+                        if ((inferenceDuration > PCM_BATCH_DURATION_NANOS ||
+                                queuedBatches.get() >= PCM_QUEUE_CAPACITY / 2
+                            ) &&
                             now - lastDiagnostic >= 5_000_000_000L &&
-                            lastSlowFrameDiagnosticNanos.compareAndSet(lastDiagnostic, now)
+                            lastSlowBatchDiagnosticNanos.compareAndSet(lastDiagnostic, now)
                         ) {
                             NiaDiagnostics.record(
                                 "WARN",
                                 "voice.recognizer",
-                                "slow_frame",
-                                "Zipformer processing is approaching microphone frame cadence; inference=" +
-                                    (inferenceDuration / 1_000_000).toString() + "ms, queued=" + queuedFrames.get(),
+                                "slow_batch",
+                                "Zipformer processing is approaching the 100 ms batch cadence; inference=" +
+                                    (inferenceDuration / 1_000_000).toString() + "ms, queued_batches=" +
+                                    queuedBatches.get(),
                             )
                         }
                     }
@@ -150,6 +170,7 @@ actual fun VoiceConversationControl(
                     throw cancelled
                 } catch (failure: Exception) {
                     runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, failure.message)
+                    pcmFrames.close(failure)
                     if (recognitionFailureReported.compareAndSet(false, true)) {
                         NiaDiagnostics.record(
                             "ERROR",
@@ -171,32 +192,35 @@ actual fun VoiceConversationControl(
             val engine = NiaAndroidAudioEngine(
                 onPcmFrame = { samples, _ ->
                     runtime.setWaveformAmplitude(waveformLevel(samples))
-                    queuedFrames.incrementAndGet()
-                    // Never wait for inference here. A full queue ends the session
-                    // visibly rather than silently dropping speech frames.
-                    if (pcmFrames.trySend(samples).isFailure) {
-                        queuedFrames.decrementAndGet()
-                        if (recognitionFailureReported.compareAndSet(false, true)) {
-                            val message = "Speech recognition could not keep up with microphone audio. Please try again."
-                            runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, message)
-                            NiaDiagnostics.record(
-                                "ERROR",
-                                "voice.audio",
-                                "recognition_queue_overflow",
-                                "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
-                            )
-                            pcmFrames.close(IllegalStateException(message))
-                            // Surface the failure and stop capture. Closing the channel alone
-                            // would leave AudioRecord running and repeatedly reject new frames.
-                            scope.launch {
-                                latestOnError.value(message)
-                                latestOnActiveChange.value(false)
+                    val batch = batcher.append(samples)
+                    if (batch != null) {
+                        queuedBatches.incrementAndGet()
+                        // Never wait for native inference on the real-time microphone thread.
+                        // A full bounded queue still fails closed and records the rejected batch.
+                        if (pcmFrames.trySend(batch).isFailure) {
+                            queuedBatches.decrementAndGet()
+                            if (recognitionFailureReported.compareAndSet(false, true)) {
+                                val message = "Speech recognition could not keep up with microphone audio. Please try again."
+                                runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, message)
+                                NiaDiagnostics.record(
+                                    "ERROR",
+                                    "voice.audio",
+                                    "recognition_queue_overflow",
+                                    "Zipformer queue full at 100 ms batch cadence; capacity=500 ms, " +
+                                        "queued_batches=${queuedBatches.get()}, rejected_samples=${batch.size}. " +
+                                        "Session stopped to avoid silent audio loss.",
+                                )
+                                pcmFrames.close(IllegalStateException(message))
+                                scope.launch {
+                                    latestOnError.value(message)
+                                    latestOnActiveChange.value(false)
+                                }
                             }
                         }
                     }
                 },
-                onVoiceActivity = { _, _ ->
-                    runtime.setVoicePhase(NiaVoicePhase.Listening)
+                onVoiceActivity = { voiced, _ ->
+                    if (voiced) runtime.setVoicePhase(NiaVoicePhase.Listening)
                 },
             )
             audioEngine = engine
@@ -224,15 +248,33 @@ actual fun VoiceConversationControl(
             latestOnActiveChange.value(false)
         } finally {
             NiaDiagnostics.record("INFO", "voice", "session_end", "Voice session stopped.")
-            runtime.setWaveformAmplitude(0f)
-            // Stop the microphone thread before releasing the native recogniser it feeds.
-            withContext(Dispatchers.IO) {
-                runCatching { audioEngine?.close() }
-            }
-            // Stop and join the serial inference worker before releasing its native recogniser.
-            runCatching { recognizerWorker?.cancelAndJoin() }
-            withContext(Dispatchers.IO) {
-                runCatching { streamingRecognizer?.close() }
+            withContext(NonCancellable) {
+                runtime.setWaveformAmplitude(0f)
+                // Stop and join AudioRecord before draining the final partial batch.
+                withContext(Dispatchers.IO) {
+                    runCatching { audioEngine?.close() }
+                }
+                val trailingBatch = batcher.drain()
+                if (trailingBatch != null && !recognitionFailureReported.get()) {
+                    queuedBatches.incrementAndGet()
+                    if (pcmFrames.trySend(trailingBatch).isFailure) {
+                        queuedBatches.decrementAndGet()
+                        NiaDiagnostics.record(
+                            "WARN",
+                            "voice.recognizer",
+                            "recognition_tail_flush_failed",
+                            "Final partial PCM batch could not be queued; samples=${trailingBatch.size}.",
+                        )
+                    }
+                }
+                // Closing after the tail flush lets the serial worker drain all accepted
+                // audio in order before its native recognizer is released.
+                pcmFrames.close()
+                runCatching { recognizerWorker?.join() }
+                workerScope?.cancel()
+                withContext(Dispatchers.IO) {
+                    runCatching { streamingRecognizer?.close() }
+                }
             }
         }
     }

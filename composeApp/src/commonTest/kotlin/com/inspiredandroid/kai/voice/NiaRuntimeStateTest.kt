@@ -82,6 +82,35 @@ class NiaRuntimeStateTest {
     }
 
     @Test
+    fun interactionEventsAreTypedOrderedAndBounded() {
+        val runtime = NiaRuntimeState()
+
+        runtime.signalInteraction(NiaInteractionKind.ConversationUpdated)
+        runtime.signalInteraction(NiaInteractionKind.VoiceTranscript)
+        repeat(30) {
+            runtime.signalInteraction(NiaInteractionKind.SystemAction)
+        }
+
+        val snapshot = runtime.state.value
+        assertEquals(32L, snapshot.lastInteraction)
+        assertEquals(24, snapshot.interactionEvents.size)
+        assertEquals(9L, snapshot.interactionEvents.first().sequence)
+        assertEquals(32L, snapshot.interactionEvents.last().sequence)
+        assertEquals(NiaInteractionKind.SystemAction, snapshot.interactionEvents.last().kind)
+    }
+
+    @Test
+    fun providerAndModelCountsAreClampedToActualNonNegativeRanges() {
+        val runtime = NiaRuntimeState()
+
+        runtime.updateSystemStatus(configuredProviders = -1, connectedProviders = 5, localModels = -2)
+
+        assertEquals(0, runtime.state.value.configuredProviderCount)
+        assertEquals(0, runtime.state.value.connectedProviderCount)
+        assertEquals(0, runtime.state.value.localModelCount)
+    }
+
+    @Test
     fun lateListeningCallbackCannotRestartAnEndedSession() {
         val runtime = NiaRuntimeState()
         runtime.setVoiceSessionActive(true)

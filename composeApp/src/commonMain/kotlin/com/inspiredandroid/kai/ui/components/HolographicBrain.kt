@@ -1,5 +1,6 @@
 package com.inspiredandroid.kai.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -10,7 +11,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -39,6 +42,16 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
         NiaVoicePhase.Listening -> Color(0xFFB7FF6A)
         NiaVoicePhase.Thinking -> Color(0xFFB69CFF)
         NiaVoicePhase.Speaking -> Color(0xFF62F5E5)
+    }
+    val interactionPulse = remember { Animatable(0f) }
+    LaunchedEffect(runtime.lastInteraction) {
+        if (runtime.lastInteraction > 0L) {
+            interactionPulse.snapTo(1f)
+            interactionPulse.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(460, easing = FastOutSlowInEasing),
+            )
+        }
     }
     val transition = rememberInfiniteTransition()
     val pulse by transition.animateFloat(
@@ -93,8 +106,8 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
             style = Stroke(s * (0.004f + waveform * 0.008f)),
         )
         drawCircle(
-            color = phaseTint.copy(alpha = 0.035f + waveform * 0.09f),
-            radius = s * (0.29f + waveform * 0.045f),
+            color = phaseTint.copy(alpha = 0.035f + waveform * 0.09f + interactionPulse.value * 0.12f),
+            radius = s * (0.29f + waveform * 0.045f + interactionPulse.value * 0.025f),
             center = c,
         )
 
