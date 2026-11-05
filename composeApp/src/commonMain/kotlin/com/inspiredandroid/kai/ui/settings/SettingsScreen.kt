@@ -127,12 +127,18 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     navigationTabBar: (@Composable () -> Unit)? = null,
     niaVoiceController: NiaVoiceController? = null,
+    initialTab: SettingsTab = SettingsTab.Services,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
     val niaRuntime = koinInject<NiaRuntimeState>()
     val runtimeSnapshot by niaRuntime.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(initialTab) {
+        viewModel.actions.onSelectTab(initialTab)
+    }
+
     val onPrepareAndTestVoice: (() -> Unit)? = niaVoiceController?.let { controller ->
         {
             niaRuntime.signalInteraction(NiaInteractionKind.SystemAction)
