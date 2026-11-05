@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.inspiredandroid.kai.BackIcon
 import com.inspiredandroid.kai.Version
@@ -243,12 +244,12 @@ fun SettingsScreenContent(
             ) {
                 Text(
                     text = "N I A   /   SYSTEM CONTROL",
-                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 2.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 2.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = "CONFIGURATION  •  CONNECTIONS  •  MEMORY VAULT",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
