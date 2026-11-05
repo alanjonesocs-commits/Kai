@@ -18,6 +18,7 @@ import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
 import com.inspiredandroid.kai.voice.NiaAndroidAudioEngine
 import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus
 import com.inspiredandroid.kai.voice.NiaSherpaModelInstaller
 import com.inspiredandroid.kai.voice.NiaSherpaStreamingRecognizer
 import com.inspiredandroid.kai.voice.NiaVoicePhase
@@ -86,6 +87,7 @@ actual fun VoiceConversationControl(
     LaunchedEffect(listeningEnabled) {
         if (!listeningEnabled) return@LaunchedEffect
         runtime.setVoicePhase(NiaVoicePhase.Listening)
+        runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Preparing)
 
         var audioEngine: NiaAndroidAudioEngine? = null
         var streamingRecognizer: NiaSherpaStreamingRecognizer? = null
@@ -113,6 +115,7 @@ actual fun VoiceConversationControl(
                 )
             }
             streamingRecognizer = recognizer
+            runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Ready)
 
             // Keep native inference off the real-time microphone thread. Sherpa calls
             // must remain serial, so one worker drains this bounded FIFO in order.
@@ -146,6 +149,7 @@ actual fun VoiceConversationControl(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
+                    runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, failure.message)
                     if (recognitionFailureReported.compareAndSet(false, true)) {
                         NiaDiagnostics.record(
                             "ERROR",
@@ -174,6 +178,7 @@ actual fun VoiceConversationControl(
                         queuedFrames.decrementAndGet()
                         if (recognitionFailureReported.compareAndSet(false, true)) {
                             val message = "Speech recognition could not keep up with microphone audio. Please try again."
+                            runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, message)
                             NiaDiagnostics.record(
                                 "ERROR",
                                 "voice.audio",
@@ -199,6 +204,9 @@ actual fun VoiceConversationControl(
             runtime.setVoicePhase(NiaVoicePhase.Listening)
             awaitCancellation()
         } catch (cancelled: CancellationException) {
+            if (runtime.state.value.speechRecognitionStatus == NiaSpeechRecognitionStatus.Preparing) {
+                runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Unknown)
+            }
             throw cancelled
         } catch (failure: Exception) {
             val message = failure.message ?: "Could not start local speech recognition."
@@ -210,6 +218,7 @@ actual fun VoiceConversationControl(
                 failure::class.qualifiedName,
                 stackTrace = failure.stackTraceToString(),
             )
+            runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Error, message)
             latestOnError.value(message)
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             latestOnActiveChange.value(false)

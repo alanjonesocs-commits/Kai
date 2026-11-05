@@ -13,10 +13,33 @@ enum class NiaVoicePhase {
     Speaking,
 }
 
+enum class NiaVoiceOutputStatus {
+    Unknown,
+    NotInstalled,
+    Preparing,
+    PiperInstalled,
+    PiperReady,
+    SystemTtsFallback,
+    Unavailable,
+    Error,
+}
+
+enum class NiaSpeechRecognitionStatus {
+    Unknown,
+    Preparing,
+    Ready,
+    Error,
+}
+
 data class NiaRuntimeSnapshot(
     val voicePhase: NiaVoicePhase = NiaVoicePhase.Idle,
     val voiceSessionActive: Boolean = false,
     val waveformAmplitude: Float = 0f,
+    val voiceOutputStatus: NiaVoiceOutputStatus = NiaVoiceOutputStatus.Unknown,
+    val voiceOutputDetail: String? = null,
+    val speechRecognitionStatus: NiaSpeechRecognitionStatus = NiaSpeechRecognitionStatus.Unknown,
+    val speechRecognitionDetail: String? = null,
+    val freeStorageBytes: Long? = null,
     val memoryEntryCount: Int? = null,
     val configuredProviderCount: Int? = null,
     val connectedProviderCount: Int? = null,
@@ -76,6 +99,18 @@ class NiaRuntimeState {
                 current.copy(waveformAmplitude = 0f)
             }
         }
+    }
+
+    fun updateVoiceOutputStatus(status: NiaVoiceOutputStatus, detail: String? = null) {
+        mutableState.update { it.copy(voiceOutputStatus = status, voiceOutputDetail = detail) }
+    }
+
+    fun updateSpeechRecognitionStatus(status: NiaSpeechRecognitionStatus, detail: String? = null) {
+        mutableState.update { it.copy(speechRecognitionStatus = status, speechRecognitionDetail = detail) }
+    }
+
+    fun updateFreeStorageBytes(bytes: Long?) {
+        mutableState.update { it.copy(freeStorageBytes = bytes?.takeIf { value -> value > 0L }) }
     }
 
     fun updateMemoryStatus(entryCount: Int) {

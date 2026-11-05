@@ -28,6 +28,7 @@ import com.inspiredandroid.kai.data.ThemeMode
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
 import nl.marc_apps.tts.TextToSpeechEngine
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
         val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         val appSettings: AppSettings = get()
+        val niaRuntime: NiaRuntimeState = get()
         setContent {
             val themeMode by appSettings.themeModeFlow.collectAsStateWithLifecycle()
             val systemInDark = isSystemInDarkTheme()
@@ -85,8 +87,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 null
             }
-            val niaVoiceController = remember(context, textToSpeech) {
-                AndroidNiaVoiceController(context.applicationContext, textToSpeech)
+            val niaVoiceController = remember(context, textToSpeech, niaRuntime) {
+                AndroidNiaVoiceController(context.applicationContext, textToSpeech, niaRuntime)
             }
             DisposableEffect(niaVoiceController) {
                 onDispose { niaVoiceController.close() }

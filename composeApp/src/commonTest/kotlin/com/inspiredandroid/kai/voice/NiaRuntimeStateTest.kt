@@ -63,6 +63,25 @@ class NiaRuntimeStateTest {
     }
 
     @Test
+    fun voiceBackendStorageAndInteractionTelemetryAreShared() {
+        val runtime = NiaRuntimeState()
+
+        runtime.updateVoiceOutputStatus(NiaVoiceOutputStatus.PiperReady)
+        runtime.updateSpeechRecognitionStatus(NiaSpeechRecognitionStatus.Ready)
+        runtime.updateFreeStorageBytes(1_024L)
+        runtime.signalInteraction()
+        runtime.signalInteraction()
+
+        assertEquals(NiaVoiceOutputStatus.PiperReady, runtime.state.value.voiceOutputStatus)
+        assertEquals(NiaSpeechRecognitionStatus.Ready, runtime.state.value.speechRecognitionStatus)
+        assertEquals(1_024L, runtime.state.value.freeStorageBytes)
+        assertEquals(2L, runtime.state.value.lastInteraction)
+
+        runtime.updateFreeStorageBytes(0L)
+        assertEquals(null, runtime.state.value.freeStorageBytes)
+    }
+
+    @Test
     fun lateListeningCallbackCannotRestartAnEndedSession() {
         val runtime = NiaRuntimeState()
         runtime.setVoiceSessionActive(true)

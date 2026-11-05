@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
@@ -82,6 +83,8 @@ import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors
 import com.inspiredandroid.kai.voice.NiaRuntimeSnapshot
 import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaVoiceController
+import com.inspiredandroid.kai.voice.NiaVoiceOutputStatus
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.github_mark
 import kai.composeapp.generated.resources.settings_ai_mistakes_warning
@@ -104,6 +107,8 @@ import kai.composeapp.generated.resources.snackbar_task_cancelled
 import kai.composeapp.generated.resources.snackbar_undo
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -120,17 +125,43 @@ fun SettingsScreen(
     sandboxViewModel: SandboxViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
     navigationTabBar: (@Composable () -> Unit)? = null,
+    niaVoiceController: NiaVoiceController? = null,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
     val niaRuntime = koinInject<NiaRuntimeState>()
     val runtimeSnapshot by niaRuntime.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val onPrepareAndTestVoice: (() -> Unit)? = niaVoiceController?.let { controller ->
+        {
+            scope.launch {
+                try {
+                    controller.prepare()
+                    controller.speak("Nia voice systems online.")
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    niaRuntime.updateVoiceOutputStatus(
+                        NiaVoiceOutputStatus.Error,
+                        error.message ?: "Voice test failed.",
+                    )
+                }
+            }
+            Unit
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.onScreenVisible()
     }
 
-    LaunchedEffect(uiState.memories, uiState.configuredServices, uiState.localImportedModels) {
+    LaunchedEffect(
+        uiState.memories,
+        uiState.configuredServices,
+        uiState.localImportedModels,
+        uiState.localFreeSpaceBytes,
+    ) {
+        niaRuntime.updateFreeStorageBytes(uiState.localFreeSpaceBytes)
         niaRuntime.updateMemoryStatus(uiState.memories.size)
         niaRuntime.updateSystemStatus(
             configuredProviders = uiState.configuredServices.size,
@@ -164,6 +195,7 @@ fun SettingsScreen(
         onNavigateBack = onNavigateBack,
         navigationTabBar = navigationTabBar,
         runtimeSnapshot = runtimeSnapshot,
+        onPrepareAndTestVoice = onPrepareAndTestVoice,
     )
 }
 
@@ -181,6 +213,7 @@ fun SettingsScreenContent(
     onMigrateHome: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
     runtimeSnapshot: NiaRuntimeSnapshot = NiaRuntimeSnapshot(),
+    onPrepareAndTestVoice: (() -> Unit)? = null,
     navigationTabBar: (@Composable () -> Unit)? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -290,6 +323,7 @@ fun SettingsScreenContent(
                 runtime = runtimeSnapshot,
                 onOpenConnections = { actions.onSelectTab(SettingsTab.Services) },
                 onOpenMemoryVault = { actions.onSelectTab(SettingsTab.Agent) },
+                onPrepareAndTestVoice = onPrepareAndTestVoice,
             )
 
             val settingsScrollState = rememberScrollState()
@@ -396,13 +430,14 @@ private fun SystemStatusCard(
     runtime: NiaRuntimeSnapshot,
     onOpenConnections: () -> Unit,
     onOpenMemoryVault: () -> Unit,
+    onPrepareAndTestVoice: (() -> Unit)?,
 ) {
     val configuredProviders = runtime.configuredProviderCount ?: uiState.configuredServices.size
     val connectedProviders = runtime.connectedProviderCount
         ?: uiState.configuredServices.count { it.connectionStatus == ConnectionStatus.Connected }
     val localModels = runtime.localModelCount ?: uiState.localImportedModels.size
     val memoryCount = runtime.memoryEntryCount ?: uiState.memories.size
-    val freeStorage = formatByteCount(uiState.localFreeSpaceBytes)
+    val freeStorage = formatByteCount(runtime.freeStorageBytes ?: uiState.localFreeSpaceBytes)
     val selectedModels = uiState.configuredServices.mapNotNull { service ->
         service.selectedModel?.let { model ->
             "${service.service.displayName}: ${model.displayName ?: model.id}"
@@ -421,12 +456,23 @@ private fun SystemStatusCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             SystemMetric("VOICE", runtime.voicePhase.name.uppercase())
+            SystemMetric("VOICE OUT", voiceOutputStatusLabel(runtime.voiceOutputStatus))
+            SystemMetric("VOICE IN", speechRecognitionStatusLabel(runtime.speechRecognitionStatus))
             SystemMetric("SESSION", if (runtime.voiceSessionActive) "ACTIVE" else "INACTIVE")
             SystemMetric("MIC RMS", "${(runtime.waveformAmplitude * 100).toInt()}%")
+            SystemMetric("INTERACTIONS", runtime.lastInteraction.toString())
             SystemMetric("PROVIDERS", "$connectedProviders / $configuredProviders")
             SystemMetric("LOCAL MODELS", localModels.toString())
             SystemMetric("MEMORY", memoryCount.toString())
             SystemMetric("FREE STORAGE", freeStorage)
+        }
+        runtime.voiceOutputDetail?.takeIf { it.isNotBlank() }?.let { detail ->
+            Spacer(Modifier.height(6.dp))
+            Text("VOICE OUT  /  $detail", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        runtime.speechRecognitionDetail?.takeIf { it.isNotBlank() }?.let { detail ->
+            Spacer(Modifier.height(4.dp))
+            Text("VOICE IN  /  $detail", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (selectedModels.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -437,6 +483,19 @@ private fun SystemStatusCard(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            onPrepareAndTestVoice?.let { action ->
+                TextButton(
+                    onClick = action,
+                    enabled = runtime.voiceOutputStatus != NiaVoiceOutputStatus.Preparing,
+                    modifier = Modifier.handCursor(),
+                ) {
+                    Text(
+                        if (runtime.voiceOutputStatus == NiaVoiceOutputStatus.PiperInstalled ||
+                            runtime.voiceOutputStatus == NiaVoiceOutputStatus.PiperReady
+                        ) "TEST VOICE" else "INSTALL & TEST VOICE",
+                    )
+                }
+            }
             TextButton(onClick = onOpenConnections, modifier = Modifier.handCursor()) {
                 Text("Connections")
             }
@@ -445,6 +504,24 @@ private fun SystemStatusCard(
             }
         }
     }
+}
+
+private fun voiceOutputStatusLabel(status: NiaVoiceOutputStatus): String = when (status) {
+    NiaVoiceOutputStatus.Unknown -> "UNKNOWN"
+    NiaVoiceOutputStatus.NotInstalled -> "NOT INSTALLED"
+    NiaVoiceOutputStatus.Preparing -> "PREPARING"
+    NiaVoiceOutputStatus.PiperInstalled -> "PIPER INSTALLED"
+    NiaVoiceOutputStatus.PiperReady -> "PIPER READY"
+    NiaVoiceOutputStatus.SystemTtsFallback -> "SYSTEM TTS"
+    NiaVoiceOutputStatus.Unavailable -> "UNAVAILABLE"
+    NiaVoiceOutputStatus.Error -> "ERROR"
+}
+
+private fun speechRecognitionStatusLabel(status: com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus): String = when (status) {
+    com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus.Unknown -> "UNKNOWN"
+    com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus.Preparing -> "PREPARING"
+    com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus.Ready -> "SHERPA READY"
+    com.inspiredandroid.kai.voice.NiaSpeechRecognitionStatus.Error -> "ERROR"
 }
 
 @Composable

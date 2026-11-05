@@ -232,6 +232,7 @@ private fun AppContent(
                             }
                         }
                         SettingsScreen(
+                            niaVoiceController = niaVoiceController,
                             onNavigateBack = {
                                 chatViewModel.refreshSettings()
                                 navController.navigateUp()
