@@ -32,6 +32,7 @@ import io.github.vinceglb.filekit.dialogs.init
 import nl.marc_apps.tts.TextToSpeechEngine
 import nl.marc_apps.tts.TextToSpeechFactory
 import nl.marc_apps.tts.TextToSpeechInstance
+import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
 import org.koin.android.ext.android.get
 
 class MainActivity : ComponentActivity() {
@@ -84,11 +85,18 @@ class MainActivity : ComponentActivity() {
             } else {
                 null
             }
+            val niaVoiceController = remember(context, textToSpeech) {
+                AndroidNiaVoiceController(context.applicationContext, textToSpeech)
+            }
+            DisposableEffect(niaVoiceController) {
+                onDispose { niaVoiceController.close() }
+            }
             App(
                 navController = navController,
                 lightColorScheme = lightScheme,
                 darkColorScheme = darkScheme,
                 textToSpeech = textToSpeech,
+                niaVoiceController = niaVoiceController,
                 isKoinStarted = true,
                 onAppOpens = { appOpens ->
                     if (appOpens % 5 == 0) {
