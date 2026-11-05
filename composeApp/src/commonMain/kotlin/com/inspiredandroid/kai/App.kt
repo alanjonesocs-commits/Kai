@@ -43,10 +43,10 @@ import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.ui.Theme
 import com.inspiredandroid.kai.ui.chat.ChatScreen
-import com.inspiredandroid.kai.ui.home.NiaHomeScreen
 import com.inspiredandroid.kai.ui.chat.ChatViewModel
 import com.inspiredandroid.kai.ui.components.FullScreenImageHost
 import com.inspiredandroid.kai.ui.handCursor
+import com.inspiredandroid.kai.ui.home.NiaHomeScreen
 import com.inspiredandroid.kai.ui.rememberSandboxAwareUriHandler
 import com.inspiredandroid.kai.ui.settings.SettingsScreen
 import com.inspiredandroid.kai.ui.withBlackBackground

@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.voice.NiaRuntimeState
-import com.inspiredandroid.kai.voice.NiaVoicePhase
 import com.inspiredandroid.kai.voice.NiaVoiceOutputStatus
+import com.inspiredandroid.kai.voice.NiaVoicePhase
 import org.koin.compose.koinInject
 
 @Composable
