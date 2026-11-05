@@ -14,7 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import nl.marc_apps.tts.TextToSpeechInstance
 
 /** Android implementation: prefer installed offline Piper, otherwise retain system TTS. */
-internal class AndroidNiaVoiceController(
+class AndroidNiaVoiceController(
     context: Context,
     private val systemTts: TextToSpeechInstance?,
 ) : NiaVoiceController {
