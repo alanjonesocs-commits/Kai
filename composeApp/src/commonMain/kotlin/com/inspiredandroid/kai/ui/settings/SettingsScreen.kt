@@ -126,6 +126,10 @@ fun SettingsScreen(
     val niaRuntime = koinInject<NiaRuntimeState>()
     val runtimeSnapshot by niaRuntime.state.collectAsStateWithLifecycle()
 
+    LaunchedEffect(viewModel) {
+        viewModel.onScreenVisible()
+    }
+
     LaunchedEffect(uiState.memories, uiState.configuredServices, uiState.localImportedModels) {
         niaRuntime.updateMemoryStatus(uiState.memories.size)
         niaRuntime.updateSystemStatus(
