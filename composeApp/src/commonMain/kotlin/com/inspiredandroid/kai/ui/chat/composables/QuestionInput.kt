@@ -258,6 +258,24 @@ fun QuestionInput(
         // grow with the font scale — otherwise the composer shows a single line of
         // what the user is typing at the largest accessibility font size.
         val maxComposerHeight = 120.dp * LocalDensity.current.fontScale
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "NIA  /  INPUT CHANNEL",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+            )
+            Text(
+                text = if (isLoading) "TRANSMITTING" else "READY",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isLoading) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         TextField(
             value = textState,
             onValueChange = onTextStateChange,
