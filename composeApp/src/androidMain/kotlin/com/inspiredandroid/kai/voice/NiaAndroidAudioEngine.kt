@@ -27,6 +27,7 @@ import kotlin.math.sqrt
 internal class NiaAndroidAudioEngine(
     private val onPcmFrame: (ShortArray, Long) -> Unit,
     private val onVoiceActivity: (Boolean, Long) -> Unit,
+    private val onCaptureError: (String) -> Unit = {},
     private val sampleRate: Int = INPUT_SAMPLE_RATE,
     private val frameSamples: Int = FRAME_SAMPLES,
 ) : Closeable {
@@ -125,8 +126,17 @@ internal class NiaAndroidAudioEngine(
                     AudioRecord.READ_BLOCKING,
                 )
                 if (count < 0) {
-                    if (count == AudioRecord.ERROR_DEAD_OBJECT) break
-                    continue
+                    if (count == AudioRecord.ERROR_DEAD_OBJECT) {
+                        onCaptureError("Microphone capture ended because the audio device became unavailable.")
+                        break
+                    }
+                    val message = when (count) {
+                        AudioRecord.ERROR_BAD_VALUE -> "Android rejected the microphone capture buffer or format."
+                        AudioRecord.ERROR_INVALID_OPERATION -> "Android stopped the microphone capture operation."
+                        else -> "Android microphone capture failed (code=$count)."
+                    }
+                    onCaptureError(message)
+                    break
                 }
                 if (count == 0) continue
                 filled += count
