@@ -1815,10 +1815,13 @@ class RemoteDataRepository(
         val memoryEnabled = appSettings.isMemoryEnabled()
         val schedulingEnabled = appSettings.isSchedulingEnabled()
 
-        val memoryInstructions = if (memoryEnabled) {
-            appSettings.getMemoryInstructions().ifEmpty { null }
-        } else {
-            null
+        val memoryInstructions = when {
+            !memoryEnabled -> null
+            variant == SystemPromptVariant.CHAT_REMOTE ->
+                "Remote memory context is limited to entries Alan explicitly marked for provider sharing. " +
+                    "Never reference or transmit local-only memories. Propose new memories for Alan's approval; " +
+                    "do not claim a proposal is permanently saved until it is approved."
+            else -> appSettings.getMemoryInstructions().ifEmpty { null }
         }
 
         val memories = if (!memoryEnabled) {
