@@ -2,8 +2,8 @@ package com.inspiredandroid.kai.ui.chat.composables
 
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,8 +88,8 @@ actual fun VoiceConversationControl(
         },
     ) {
         Icon(
-            imageVector = if (active) Icons.Filled.CallEnd else Icons.Filled.Call,
-            contentDescription = if (active) "End Nia voice conversation" else "Start Nia voice conversation",
+            imageVector = if (active) Icons.Filled.MicOff else Icons.Filled.Mic,
+            contentDescription = if (active) "Stop voice conversation" else "Start voice conversation",
             tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
