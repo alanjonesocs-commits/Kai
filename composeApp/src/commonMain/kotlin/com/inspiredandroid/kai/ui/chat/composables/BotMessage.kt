@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -141,6 +142,7 @@ internal fun BotMessage(
                         isInteractive = effectiveInteractive,
                         onUiCallback = kaiUiCallback,
                         frozen = effectiveFrozen,
+                        contentColor = Color(0xFFF4F7FB),
                         modifier = Modifier.fillMaxWidth()
                             .padding(start = 16.dp, top = answerTopPadding, end = 16.dp, bottom = 8.dp),
                     )
