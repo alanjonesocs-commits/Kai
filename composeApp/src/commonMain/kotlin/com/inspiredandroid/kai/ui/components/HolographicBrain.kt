@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -27,12 +28,43 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
         1f,
         infiniteRepeatable(tween(2800, easing = FastOutSlowInEasing), RepeatMode.Restart),
     )
+    val orbit by transition.animateFloat(
+        0f,
+        360f,
+        infiniteRepeatable(tween(18000, easing = FastOutSlowInEasing), RepeatMode.Restart),
+    )
+    val breathe by transition.animateFloat(
+        0.92f,
+        1.08f,
+        infiniteRepeatable(tween(1900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+    )
     Canvas(modifier.size(size)) {
         val s = minOf(this.size.width, this.size.height)
         val c = Offset(this.size.width / 2f, this.size.height / 2f)
         val cyan = Color(0xFF63E9FF)
         val blue = Color(0xFF5595FF)
         val violet = Color(0xFFB49AFF)
+
+        // Alien orbital field: slow rotating ellipses and signal nodes.
+        rotate(orbit, c) {
+            drawOval(
+                color = violet.copy(alpha = 0.42f),
+                topLeft = Offset(c.x - s * 0.43f, c.y - s * 0.17f),
+                size = androidx.compose.ui.geometry.Size(s * 0.86f, s * 0.34f),
+                style = Stroke(s * 0.004f),
+            )
+            val satellite = Offset(c.x + s * 0.43f, c.y)
+            drawCircle(cyan.copy(alpha = 0.18f), s * 0.045f, satellite)
+            drawCircle(cyan.copy(alpha = 0.85f), s * 0.012f, satellite)
+        }
+        rotate(-orbit * 0.62f, c) {
+            drawOval(
+                color = blue.copy(alpha = 0.24f),
+                topLeft = Offset(c.x - s * 0.39f, c.y - s * 0.25f),
+                size = androidx.compose.ui.geometry.Size(s * 0.78f, s * 0.50f),
+                style = Stroke(s * 0.003f),
+            )
+        }
 
         // Holographic scan rings.
         for (i in 0..2) {
@@ -57,8 +89,13 @@ fun HolographicBrain(modifier: Modifier = Modifier, size: Dp = 216.dp) {
             cubicTo(c.x + s * 0.34f, c.y + s * 0.20f, c.x + s * 0.18f, c.y + s * 0.28f, c.x, c.y + s * 0.23f)
             close()
         }
-        drawPath(left, cyan.copy(alpha = 0.72f), style = Stroke(s * 0.012f))
-        drawPath(right, blue.copy(alpha = 0.72f), style = Stroke(s * 0.012f))
+        drawPath(left, cyan.copy(alpha = 0.72f), style = Stroke(s * 0.012f * breathe))
+        drawPath(right, blue.copy(alpha = 0.72f), style = Stroke(s * 0.012f * breathe))
+        drawCircle(
+            color = cyan.copy(alpha = 0.055f),
+            radius = s * 0.20f * breathe,
+            center = c,
+        )
 
         // Curved folds create the holographic brain texture.
         val folds = listOf(
