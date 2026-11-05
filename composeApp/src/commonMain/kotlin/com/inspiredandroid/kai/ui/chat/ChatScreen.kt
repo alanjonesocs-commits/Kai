@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -111,6 +112,7 @@ import com.inspiredandroid.kai.ui.sandbox.SandboxTabsContent
 import com.inspiredandroid.kai.ui.settings.SandboxUiState
 import com.inspiredandroid.kai.ui.settings.SandboxViewModel
 import com.inspiredandroid.kai.voice.NiaInteractionKind
+import com.inspiredandroid.kai.voice.NiaRuntimeSnapshot
 import com.inspiredandroid.kai.voice.NiaRuntimeState
 import com.inspiredandroid.kai.voice.NiaVoiceController
 import com.inspiredandroid.kai.voice.NiaVoicePhase
@@ -544,6 +546,8 @@ private fun ChatModeScreen(
         mutableStateOf(TextFieldValue(""))
     }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val niaRuntime = koinInject<NiaRuntimeState>()
+    val runtimeSnapshot by niaRuntime.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.composerPrefill) {
@@ -631,6 +635,8 @@ private fun ChatModeScreen(
                 },
                 navigationTabBar = navigationTabBar,
             )
+
+            NiaConversationStatusBar(runtime = runtimeSnapshot)
 
             HeartbeatBanner(
                 visible = uiState.hasUnreadHeartbeat,
@@ -1054,6 +1060,84 @@ private fun ChatModeScreen(
             onDismiss = { showHistorySheet = false },
             onConversationSelected = { isSandboxOpen = false },
         )
+    }
+}
+
+
+@Composable
+private fun NiaConversationStatusBar(runtime: NiaRuntimeSnapshot) {
+    val phaseColor = when (runtime.voicePhase) {
+        NiaVoicePhase.Idle -> Color(0xFF63E9FF)
+        NiaVoicePhase.Listening -> Color(0xFFB7FF6A)
+        NiaVoicePhase.Thinking -> Color(0xFFB69CFF)
+        NiaVoicePhase.Speaking -> Color(0xFF62F5E5)
+    }
+    val sessionLabel = if (runtime.voiceSessionActive) "VOICE SESSION ACTIVE" else "VOICE STANDBY"
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.78f))
+            .border(
+                BorderStroke(1.dp, phaseColor.copy(alpha = 0.32f)),
+                RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = "NIA NEURAL LINK",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "${runtime.voicePhase.name.uppercase()}  •  $sessionLabel",
+                style = MaterialTheme.typography.labelMedium,
+                color = phaseColor,
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = "MIC ${(runtime.waveformAmplitude * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = phaseColor,
+            )
+            Box(
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(phaseColor.copy(alpha = 0.18f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(runtime.waveformAmplitude.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .background(phaseColor),
+                )
+            }
+            Text(
+                text = "IN ${runtime.speechRecognitionStatus.name.uppercase()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "OUT ${runtime.voiceOutputStatus.name.uppercase()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
