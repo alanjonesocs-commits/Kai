@@ -278,6 +278,12 @@ class AppSettings(internal val settings: Settings) {
         settings.putString(KEY_AGENT_MEMORIES, json)
     }
 
+    fun getPendingMemoryApprovalsJson(): String = settings.getString(KEY_PENDING_MEMORY_APPROVALS, "[]")
+
+    fun setPendingMemoryApprovalsJson(json: String) {
+        settings.putString(KEY_PENDING_MEMORY_APPROVALS, json)
+    }
+
     // Scheduling
     fun isSchedulingEnabled(): Boolean = settings.getBoolean(KEY_SCHEDULING_ENABLED, true)
 
@@ -573,6 +579,7 @@ class AppSettings(internal val settings: Settings) {
         const val KEY_MEMORY_ENABLED = "memory_enabled"
         const val KEY_MEMORY_INSTRUCTIONS = "memory_instructions"
         const val KEY_AGENT_MEMORIES = "agent_memories"
+        const val KEY_PENDING_MEMORY_APPROVALS = "nia_pending_memory_approvals"
         const val KEY_CORRUPT_JSON_BACKUP_PREFIX = "corrupt_json_backup."
         const val KEY_SCHEDULED_TASKS = "scheduled_tasks"
         const val KEY_SCHEDULING_ENABLED = "scheduling_enabled"
@@ -632,9 +639,9 @@ class AppSettings(internal val settings: Settings) {
         const val DEFAULT_MEMORY_INSTRUCTIONS =
             "You have persistent memory across conversations. " +
                 "All your stored memories are listed in the system prompt grouped by category.\n\n" +
-                "When you learn important information about the user (name, preferences, projects, goals, etc.), " +
-                "proactively use the memory_store tool to save it.\n" +
-                "Use the memory_forget tool to remove outdated or incorrect memories.\n" +
-                "Do not store trivial or transient information."
+                "When you learn useful information about the user, proactively use memory_store or memory_learn to propose it for Alan's approval. " +
+                "A proposal is not saved until Alan approves it in the Memory Vault; never claim it has been saved before approval.\n" +
+                "New memory proposals are local-only by default. Never send memory content to a provider unless Alan explicitly enables sharing for that memory.\n" +
+                "Use memory_forget only when the user asks to remove outdated or incorrect memories. Do not store trivial or transient information."
     }
 }

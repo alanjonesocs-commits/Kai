@@ -3,6 +3,7 @@ package com.inspiredandroid.kai.tools
 import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryStore
+import com.inspiredandroid.kai.data.MemoryApprovalStore
 import com.inspiredandroid.kai.httpClient
 import com.inspiredandroid.kai.network.tools.ParameterSchema
 import com.inspiredandroid.kai.network.tools.Tool
@@ -170,7 +171,7 @@ object CommonTools {
     val memoryStoreToolInfo = ToolInfo(
         id = "memory_store",
         name = "Store Memory",
-        description = "Store or update a memory with a descriptive key",
+        description = "Propose a memory for the user to review and approve before it is saved",
         nameRes = Res.string.tool_memory_store_name,
         descriptionRes = Res.string.tool_memory_store_description,
         userToggleable = false,
@@ -188,7 +189,7 @@ object CommonTools {
     val memoryLearnToolInfo = ToolInfo(
         id = "memory_learn",
         name = "Learn Memory",
-        description = "Store a categorized learning, error resolution, or preference",
+        description = "Propose a categorized learning, error resolution, or preference for user approval",
         nameRes = Res.string.tool_memory_learn_name,
         descriptionRes = Res.string.tool_memory_learn_description,
         userToggleable = false,
@@ -275,10 +276,10 @@ object CommonTools {
 
     // Memory tools - always enabled, core agent functionality
 
-    fun memoryStoreTool(memoryStore: MemoryStore) = object : Tool {
+    fun memoryStoreTool(approvalStore: MemoryApprovalStore) = object : Tool {
         override val schema = ToolSchema(
             name = "memory_store",
-            description = "Store or update a memory with a descriptive key. Use this proactively to remember user preferences, facts, and important information across conversations.",
+            description = "Propose a memory for the user to review. This does not save it permanently; the user must approve it in the Memory Vault.",
             parameters = mapOf(
                 "key" to ParameterSchema(type = "string", description = "Descriptive key for the memory (e.g. user_name, preferred_language, project_details)", required = true),
                 "content" to ParameterSchema(type = "string", description = "The content to store", required = true),
@@ -288,8 +289,14 @@ object CommonTools {
         override suspend fun execute(args: Map<String, Any>): Any {
             val key = args["key"]?.toString() ?: return mapOf("success" to false, "error" to "Missing key")
             val content = args["content"]?.toString() ?: return mapOf("success" to false, "error" to "Missing content")
-            val entry = memoryStore.store(key, content)
-            return mapOf("success" to true, "key" to entry.key, "content" to entry.content)
+            val suggestion = approvalStore.suggest(key, content)
+            return mapOf(
+                "success" to true,
+                "status" to "pending_approval",
+                "key" to suggestion.key,
+                "content" to suggestion.content,
+                "message" to "Memory proposal queued locally. It is not permanently saved until the user approves it in the Memory Vault.",
+            )
         }
     }
 
@@ -309,10 +316,10 @@ object CommonTools {
         }
     }
 
-    fun memoryLearnTool(memoryStore: MemoryStore) = object : Tool {
+    fun memoryLearnTool(approvalStore: MemoryApprovalStore) = object : Tool {
         override val schema = ToolSchema(
             name = "memory_learn",
-            description = "Store a structured learning with a category. Use LEARNING for things that worked, ERROR for error resolutions, PREFERENCE for user corrections/preferences.",
+            description = "Propose a categorized learning for user approval. Use LEARNING for things that worked, ERROR for error resolutions, PREFERENCE for user corrections/preferences. Do not claim it is saved until approved.",
             parameters = mapOf(
                 "key" to ParameterSchema(type = "string", description = "Descriptive key for the learning", required = true),
                 "content" to ParameterSchema(type = "string", description = "What was learned", required = true),
@@ -337,8 +344,15 @@ object CommonTools {
                 return mapOf("success" to false, "error" to "Use memory_store for GENERAL memories. memory_learn is for LEARNING, ERROR, or PREFERENCE")
             }
 
-            val entry = memoryStore.store(key, content, category, source)
-            return mapOf("success" to true, "key" to entry.key, "category" to entry.category.name, "content" to entry.content)
+            val suggestion = approvalStore.suggest(key, content, category, source)
+            return mapOf(
+                "success" to true,
+                "status" to "pending_approval",
+                "key" to suggestion.key,
+                "category" to suggestion.category.name,
+                "content" to suggestion.content,
+                "message" to "Learning proposal queued locally. It is not permanently saved until the user approves it in the Memory Vault.",
+            )
         }
     }
 
@@ -359,10 +373,10 @@ object CommonTools {
         }
     }
 
-    fun getMemoryTools(memoryStore: MemoryStore): List<Tool> = listOf(
-        memoryStoreTool(memoryStore),
+    fun getMemoryTools(memoryStore: MemoryStore, approvalStore: MemoryApprovalStore): List<Tool> = listOf(
+        memoryStoreTool(approvalStore),
         memoryForgetTool(memoryStore),
-        memoryLearnTool(memoryStore),
+        memoryLearnTool(approvalStore),
         memoryReinforceTool(memoryStore),
     )
 }

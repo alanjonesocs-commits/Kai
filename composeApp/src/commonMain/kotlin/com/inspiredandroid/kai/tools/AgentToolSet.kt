@@ -3,6 +3,7 @@ package com.inspiredandroid.kai.tools
 import com.inspiredandroid.kai.data.AppSettings
 import com.inspiredandroid.kai.data.EmailStore
 import com.inspiredandroid.kai.data.MemoryStore
+import com.inspiredandroid.kai.data.MemoryApprovalStore
 import com.inspiredandroid.kai.data.TaskStore
 import com.inspiredandroid.kai.mcp.McpServerManager
 import com.inspiredandroid.kai.network.tools.Tool
@@ -27,7 +28,7 @@ fun buildAgentToolSet(
     addAll(CommonTools.getCommonTools(appSettings))
 
     if (appSettings.isMemoryEnabled()) {
-        addAll(CommonTools.getMemoryTools(memoryStore))
+        addAll(CommonTools.getMemoryTools(memoryStore, MemoryApprovalStore(appSettings)))
     }
 
     // Heartbeat tools ride the scheduling switch — they are only reachable from a scheduled run.

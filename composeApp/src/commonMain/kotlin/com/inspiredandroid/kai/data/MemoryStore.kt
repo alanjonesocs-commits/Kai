@@ -47,6 +47,8 @@ data class MemoryEntry(
     val resolutionStatus: MemoryAssessment = MemoryAssessment.UNKNOWN,
     val sourceConversationId: String? = null,
     val provenance: List<MemoryProvenance> = emptyList(),
+    /** Only memories explicitly allowed by the user may be included in remote provider prompts. */
+    val providerShareAllowed: Boolean = false,
 )
 
 @OptIn(ExperimentalTime::class)
@@ -193,6 +195,10 @@ class MemoryStore(appSettings: AppSettings) {
 
     suspend fun updateContentById(id: String, content: String): MemoryEntry? = mutateEntry(id) { it.copy(content = content, updatedAt = Clock.System.now().toEpochMilliseconds()) }
 
+    suspend fun updateProviderShareById(id: String, allowed: Boolean): MemoryEntry? = mutateEntry(id) {
+        it.copy(providerShareAllowed = allowed, updatedAt = Clock.System.now().toEpochMilliseconds())
+    }
+
     suspend fun reinforceMemory(key: String): MemoryEntry? {
         val matches = memories.get().filter { it.key == key }
         if (matches.size != 1) return null
@@ -236,4 +242,6 @@ class MemoryStore(appSettings: AppSettings) {
     }
 
     fun getAllMemories(): List<MemoryEntry> = memories.get()
+
+    fun getProviderShareableMemories(): List<MemoryEntry> = memories.get().filter { it.providerShareAllowed }
 }
