@@ -14,7 +14,7 @@ import nl.marc_apps.tts.TextToSpeechInstance
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Android implementation: prefer installed offline Piper, otherwise retain system TTS. */
+/** Android implementation: Piper is the sole Nia speech-output engine. */
 class AndroidNiaVoiceController(
     context: Context,
     private val systemTts: TextToSpeechInstance?,
@@ -38,16 +38,15 @@ class AndroidNiaVoiceController(
         runtime?.updateVoiceOutputStatus(
             when {
                 piper.isInstalled -> NiaVoiceOutputStatus.PiperInstalled
-                systemTts != null -> NiaVoiceOutputStatus.NotInstalled
-                else -> NiaVoiceOutputStatus.Unavailable
+                else -> NiaVoiceOutputStatus.NotInstalled
             },
-            if (piper.isInstalled) null else "Northern Piper is not installed; system TTS remains available.",
+            if (piper.isInstalled) null else "Piper will be installed when the Nia call starts.",
         )
     }
 
     /**
      * Downloads and loads the optional offline voice only after an explicit user action.
-     * A failed install leaves the existing system-TTS fallback intact.
+     * A failed install is reported; no alternate speech engine is used.
      */
     override suspend fun prepare() {
         if (closed.get()) return
@@ -59,7 +58,7 @@ class AndroidNiaVoiceController(
                     downloader.download()
                 } catch (cancelled: CancellationException) {
                     runtime?.updateVoiceOutputStatus(
-                        if (systemTts != null) NiaVoiceOutputStatus.NotInstalled else NiaVoiceOutputStatus.Unavailable,
+                        NiaVoiceOutputStatus.Error,
                         "Northern Piper installation was cancelled.",
                     )
                     throw cancelled
@@ -70,7 +69,7 @@ class AndroidNiaVoiceController(
                 val detail = (downloader.state.value as? NorthernVoiceDownloader.State.Error)?.message
                     ?: "Northern Piper files are not available."
                 updateFallbackStatus(detail)
-                return@withLock
+                throw IllegalStateException(detail)
             }
 
             try {
@@ -81,6 +80,7 @@ class AndroidNiaVoiceController(
             } catch (error: Exception) {
                 piper.stop()
                 updateFallbackStatus(error.message, error)
+                throw error
             }
         }
     }
@@ -100,19 +100,12 @@ class AndroidNiaVoiceController(
                 } catch (error: Exception) {
                     piper.stop()
                     updateFallbackStatus(error.message, error)
+                    throw error
                 }
             } else {
-                updateFallbackStatus()
-            }
-
-            val fallback = systemTts ?: return@withLock
-            try {
-                fallback.say(phrase)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                runtime?.updateVoiceOutputStatus(NiaVoiceOutputStatus.Error, error.message)
-                throw error
+                prepare()
+                piper.speak(phrase)
+                runtime?.updateVoiceOutputStatus(NiaVoiceOutputStatus.PiperReady)
             }
         }
     }
@@ -120,7 +113,7 @@ class AndroidNiaVoiceController(
     override fun stop() {
         downloader.cancel()
         piper.stop()
-        systemTts?.stop()
+        // No Android system-TTS connection is used by Nia.
     }
 
     /** Native resources are released only after any manager-owned speak call exits. */
@@ -145,9 +138,9 @@ class AndroidNiaVoiceController(
         runtime?.updateVoiceOutputStatus(status, detail)
         if (detail != null || error != null) {
             NiaDiagnostics.record(
-                "WARN",
+                "ERROR",
                 "voice.tts",
-                "piper_fallback",
+                "piper_unavailable",
                 detail ?: error?.message ?: "Piper voice is unavailable.",
                 error?.javaClass?.name,
                 error?.stackTraceToString(),
