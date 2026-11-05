@@ -65,11 +65,11 @@ class NiaRuntimeState {
     }
 
     fun setWaveformAmplitude(amplitude: Float) {
-        mutableState.value = mutableState.value.copy(waveformAmplitude = amplitude.coerceIn(0f, 1f))
+        mutableState.update { it.copy(waveformAmplitude = amplitude.coerceIn(0f, 1f)) }
     }
 
     fun updateMemoryStatus(entryCount: Int) {
-        mutableState.value = mutableState.value.copy(memoryEntryCount = entryCount.coerceAtLeast(0))
+        mutableState.update { it.copy(memoryEntryCount = entryCount.coerceAtLeast(0)) }
     }
 
     fun updateSystemStatus(
@@ -77,15 +77,17 @@ class NiaRuntimeState {
         connectedProviders: Int,
         localModels: Int,
     ) {
-        mutableState.value = mutableState.value.copy(
-            configuredProviderCount = configuredProviders.coerceAtLeast(0),
-            connectedProviderCount = connectedProviders.coerceIn(0, configuredProviders.coerceAtLeast(0)),
-            localModelCount = localModels.coerceAtLeast(0),
-        )
+        mutableState.update {
+            it.copy(
+                configuredProviderCount = configuredProviders.coerceAtLeast(0),
+                connectedProviderCount = connectedProviders.coerceIn(0, configuredProviders.coerceAtLeast(0)),
+                localModelCount = localModels.coerceAtLeast(0),
+            )
+        }
     }
 
     /** Shared interaction pulse; surfaces can observe this sequence to animate in sync. */
     fun signalInteraction() {
-        mutableState.value = mutableState.value.copy(lastInteraction = mutableState.value.lastInteraction + 1L)
+        mutableState.update { it.copy(lastInteraction = it.lastInteraction + 1L) }
     }
 }
