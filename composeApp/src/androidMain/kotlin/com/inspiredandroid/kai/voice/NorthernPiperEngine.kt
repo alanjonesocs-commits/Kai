@@ -83,13 +83,10 @@ internal class NorthernPiperEngine(
         if (phrase.isEmpty()) return
         require(speed in MIN_SPEED..MAX_SPEED) { "Speech speed must be between 0.8 and 1.2." }
 
+        if (offlineTts == null) prepare()
         val request = generation.incrementAndGet()
         synthesisMutex.withLock {
-            val tts = offlineTts ?: run {
-                prepare()
-                offlineTts
-            } ?: error("Northern Piper could not be initialised.")
-
+            val tts = offlineTts ?: error("Northern Piper could not be initialised.")
             withContext(Dispatchers.IO) {
                 if (generation.get() != request) return@withContext
                 audioEngine.playPcmStream(tts.sampleRate()) { writeSamples ->
