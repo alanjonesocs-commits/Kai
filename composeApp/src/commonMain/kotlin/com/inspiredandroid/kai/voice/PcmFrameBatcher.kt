@@ -23,7 +23,7 @@ class PcmFrameBatcher(
 
     fun append(frame: ShortArray): ShortArray? {
         require(frame.size == frameSamples) {
-            "Expected ${frameSamples} PCM samples, got ${frame.size}."
+            "Expected $frameSamples PCM samples, got ${frame.size}."
         }
 
         frame.copyInto(buffer, destinationOffset = pendingSamples)

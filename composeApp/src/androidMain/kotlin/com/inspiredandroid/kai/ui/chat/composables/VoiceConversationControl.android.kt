@@ -150,9 +150,10 @@ actual fun VoiceConversationControl(
                         val inferenceDuration = System.nanoTime() - inferenceStarted
                         val now = System.nanoTime()
                         val lastDiagnostic = lastSlowBatchDiagnosticNanos.get()
-                        if ((inferenceDuration > PCM_BATCH_DURATION_NANOS ||
-                                queuedBatches.get() >= PCM_QUEUE_CAPACITY / 2
-                            ) &&
+                        if ((
+                                inferenceDuration > PCM_BATCH_DURATION_NANOS ||
+                                    queuedBatches.get() >= PCM_QUEUE_CAPACITY / 2
+                                ) &&
                             now - lastDiagnostic >= 5_000_000_000L &&
                             lastSlowBatchDiagnosticNanos.compareAndSet(lastDiagnostic, now)
                         ) {

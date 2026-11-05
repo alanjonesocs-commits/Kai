@@ -36,9 +36,9 @@ import com.inspiredandroid.kai.network.dtos.SponsorsResponseDto
 import com.inspiredandroid.kai.skills.parseGitHubSkillUrl
 import com.inspiredandroid.kai.tools.AppPermission
 import com.inspiredandroid.kai.tools.PermissionController
+import com.inspiredandroid.kai.tools.isLocalNetworkUrl
 import com.inspiredandroid.kai.voice.NiaInteractionKind
 import com.inspiredandroid.kai.voice.NiaRuntimeState
-import com.inspiredandroid.kai.tools.isLocalNetworkUrl
 import io.github.vinceglb.filekit.PlatformFile
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
