@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.ui.chat.ChatActions
+import com.inspiredandroid.kai.voice.NiaVoiceController
 import com.inspiredandroid.kai.ui.handCursor
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.chat_history_content_description
@@ -44,6 +45,7 @@ import org.jetbrains.compose.resources.vectorResource
 @Composable
 internal fun TopBar(
     textToSpeech: TextToSpeechInstance? = null,
+    niaVoiceController: NiaVoiceController? = null,
     isSpeechOutputEnabled: Boolean,
     isSpeaking: Boolean,
     actions: ChatActions,
@@ -62,14 +64,14 @@ internal fun TopBar(
             modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 64.dp),
         ) {
             Row(modifier = Modifier.align(Alignment.CenterStart)) {
-                LeadingButtons(textToSpeech, isSpeechOutputEnabled, isSpeaking, actions, isChatHistoryEmpty, hasSavedConversations, onShowHistory, isSandboxAvailable, isSandboxOpen, isShellExecuting, onToggleSandbox)
+                LeadingButtons(textToSpeech, niaVoiceController, isSpeechOutputEnabled, isSpeaking, actions, isChatHistoryEmpty, hasSavedConversations, onShowHistory, isSandboxAvailable, isSandboxOpen, isShellExecuting, onToggleSandbox)
             }
             Box(modifier = Modifier.align(Alignment.Center)) {
                 navigationTabBar()
             }
             Row(modifier = Modifier.align(Alignment.CenterEnd)) {
-                if (textToSpeech != null) {
-                    SpeechToggleButton(textToSpeech, isSpeechOutputEnabled, isSpeaking, actions)
+                if (textToSpeech != null || niaVoiceController != null) {
+                    SpeechToggleButton(textToSpeech, niaVoiceController, isSpeechOutputEnabled, isSpeaking, actions)
                 }
             }
         }
@@ -99,8 +101,8 @@ internal fun TopBar(
                 )
             }
             Spacer(Modifier.weight(1f))
-            if (textToSpeech != null) {
-                SpeechToggleButton(textToSpeech, isSpeechOutputEnabled, isSpeaking, actions)
+            if (textToSpeech != null || niaVoiceController != null) {
+                SpeechToggleButton(textToSpeech, niaVoiceController, isSpeechOutputEnabled, isSpeaking, actions)
             }
             IconButton(
                 modifier = Modifier.handCursor(),
@@ -119,6 +121,7 @@ internal fun TopBar(
 @Composable
 private fun LeadingButtons(
     textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController?,
     isSpeechOutputEnabled: Boolean,
     isSpeaking: Boolean,
     actions: ChatActions,
@@ -148,7 +151,7 @@ private fun LeadingButtons(
             onClick = {
                 if (isSpeechOutputEnabled && isSpeaking) {
                     actions.setIsSpeaking(false, "")
-                    textToSpeech?.stop()
+                    if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
                 }
                 actions.startNewChat()
             },
@@ -199,7 +202,8 @@ private fun LeadingButtons(
 
 @Composable
 private fun SpeechToggleButton(
-    textToSpeech: TextToSpeechInstance,
+    textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController?,
     isSpeechOutputEnabled: Boolean,
     isSpeaking: Boolean,
     actions: ChatActions,
@@ -209,7 +213,7 @@ private fun SpeechToggleButton(
         onClick = {
             if (isSpeechOutputEnabled && isSpeaking) {
                 actions.setIsSpeaking(false, "")
-                textToSpeech.stop()
+                if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
             }
             actions.toggleSpeechOutput()
         },
