@@ -3,6 +3,7 @@ package com.inspiredandroid.kai.voice
 import android.content.Context
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,6 +39,8 @@ internal class AndroidNiaVoiceController(
                 try {
                     piper.speak(phrase)
                     return@withLock
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
                     // A damaged/unloadable local model must not silence the conversation.
                     piper.stop()
