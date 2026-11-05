@@ -43,6 +43,7 @@ import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
 import com.inspiredandroid.kai.ui.Theme
 import com.inspiredandroid.kai.ui.chat.ChatScreen
+import com.inspiredandroid.kai.ui.home.NiaHomeScreen
 import com.inspiredandroid.kai.ui.chat.ChatViewModel
 import com.inspiredandroid.kai.ui.components.FullScreenImageHost
 import com.inspiredandroid.kai.ui.handCursor
@@ -66,6 +67,10 @@ import org.koin.dsl.koinConfiguration
 @Serializable
 @SerialName("home")
 object Home
+
+@Serializable
+@SerialName("conversation")
+object Conversation
 
 @Serializable
 @SerialName("settings")
@@ -168,32 +173,46 @@ private fun AppContent(
         Theme(colorScheme = effectiveColorScheme) {
             FullScreenImageHost {
                 val chatViewModel: ChatViewModel = koinViewModel()
-                val showTabBar = currentPlatform !is Platform.Mobile
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
-                val isHome = currentBackStackEntry?.destination?.route == "home"
+                val currentRoute = currentBackStackEntry?.destination?.route
+                val isHome = currentRoute == "home"
+                val isConversation = currentRoute == "conversation"
 
                 val navigationTabBar: @Composable () -> Unit = {
                     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-                    val count = 2
+                    val count = 3
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
                             selected = isHome,
                             onClick = {
                                 navController.navigate(Home) {
-                                    popUpTo(Home) { inclusive = true }
+                                    popUpTo(Home) { inclusive = false }
                                     launchSingleTop = true
                                 }
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = if (isRtl) count - 1 else 0, count = count),
                             modifier = Modifier.handCursor(),
                         ) {
+                            Text("HOME")
+                        }
+                        SegmentedButton(
+                            selected = isConversation,
+                            onClick = {
+                                navController.navigate(Conversation) {
+                                    popUpTo(Home) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = count),
+                            modifier = Modifier.handCursor(),
+                        ) {
                             Text(stringResource(Res.string.tab_chat))
                         }
                         SegmentedButton(
-                            selected = !isHome,
+                            selected = !isHome && !isConversation,
                             onClick = {
                                 navController.navigate(Settings) {
-                                    popUpTo(Home)
+                                    popUpTo(Home) { inclusive = false }
                                     launchSingleTop = true
                                 }
                             },
@@ -211,24 +230,35 @@ private fun AppContent(
                     modifier = Modifier.background(MaterialTheme.colorScheme.background),
                 ) {
                     composable<Home> {
+                        NiaHomeScreen(
+                            onOpenConversation = {
+                                navController.navigate(Conversation) { launchSingleTop = true }
+                            },
+                            onOpenMemory = {
+                                navController.navigate(Settings) { launchSingleTop = true }
+                            },
+                            onOpenSystems = {
+                                navController.navigate(Settings) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                    composable<Conversation> {
                         ChatScreen(
                             viewModel = chatViewModel,
                             textToSpeech = textToSpeech,
                             niaVoiceController = niaVoiceController,
                             onNavigateToSettings = {
-                                navController.navigate(Settings)
+                                navController.navigate(Settings) { launchSingleTop = true }
                             },
                             isSandboxAvailable = currentPlatform is Platform.Mobile.Android,
                             isKaiBuildAvailable = currentPlatform is Platform.Mobile.Android,
-                            navigationTabBar = if (showTabBar) navigationTabBar else null,
+                            navigationTabBar = navigationTabBar,
                         )
                     }
                     composable<Settings> {
-                        if (showTabBar) {
-                            DisposableEffect(Unit) {
-                                onDispose {
-                                    chatViewModel.refreshSettings()
-                                }
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                chatViewModel.refreshSettings()
                             }
                         }
                         SettingsScreen(
@@ -237,7 +267,7 @@ private fun AppContent(
                                 chatViewModel.refreshSettings()
                                 navController.navigateUp()
                             },
-                            navigationTabBar = if (showTabBar) navigationTabBar else null,
+                            navigationTabBar = navigationTabBar,
                         )
                     }
                 }
