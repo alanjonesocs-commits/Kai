@@ -1,12 +1,6 @@
 package com.inspiredandroid.kai.voice
 
 import android.content.Context
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,6 +14,12 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Downloads and safely installs the optional offline Northern English Piper voice.
@@ -32,6 +32,7 @@ internal class NorthernVoiceDownloader(context: Context) {
     private val stagingDirectory = File(appContext.filesDir, "$MODEL_DIRECTORY.installing")
     private val mutex = Mutex()
     private val cancelled = AtomicBoolean(false)
+
     @Volatile private var activeJob: Job? = null
 
     sealed interface State {
@@ -165,8 +166,9 @@ internal class NorthernVoiceDownloader(context: Context) {
                         val entry = tar.nextTarEntry ?: break
                         entries++
                         check(entries <= MAX_ARCHIVE_ENTRIES) { "Northern voice archive contains too many files." }
-                        check(!entry.isSymbolicLink && !entry.isLink && !entry.isCharacterDevice &&
-                            !entry.isBlockDevice && !entry.isFIFO
+                        check(
+                            !entry.isSymbolicLink && !entry.isLink && !entry.isCharacterDevice &&
+                                !entry.isBlockDevice && !entry.isFIFO,
                         ) { "Northern voice archive contains an unsupported file type." }
 
                         val rawName = entry.name.replace('\\', '/')

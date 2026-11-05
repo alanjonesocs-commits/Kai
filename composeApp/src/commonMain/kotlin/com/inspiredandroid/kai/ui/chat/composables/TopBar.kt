@@ -25,8 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.ui.chat.ChatActions
-import com.inspiredandroid.kai.voice.NiaVoiceController
 import com.inspiredandroid.kai.ui.handCursor
+import com.inspiredandroid.kai.voice.NiaVoiceController
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.chat_history_content_description
 import kai.composeapp.generated.resources.ic_add

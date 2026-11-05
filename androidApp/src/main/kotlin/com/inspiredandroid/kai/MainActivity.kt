@@ -27,11 +27,11 @@ import com.inspiredandroid.kai.data.DataRepository
 import com.inspiredandroid.kai.data.ThemeMode
 import com.inspiredandroid.kai.ui.DarkColorScheme
 import com.inspiredandroid.kai.ui.LightColorScheme
+import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
 import nl.marc_apps.tts.TextToSpeechEngine
 import nl.marc_apps.tts.TextToSpeechFactory
-import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
 import nl.marc_apps.tts.TextToSpeechInstance
 import org.koin.android.ext.android.get
 
