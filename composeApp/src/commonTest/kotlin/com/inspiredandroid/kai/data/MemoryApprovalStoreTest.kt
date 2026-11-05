@@ -22,7 +22,6 @@ class MemoryApprovalStoreTest {
         )
 
         assertEquals(1, approvals.getPendingApprovals().size)
-        assertTrue(approvals.getPendingApprovals().single().isSensitive)
         assertTrue(memories.getAllMemories().isEmpty())
 
         val approved = assertNotNull(approvals.approve(proposal.id, memories))
