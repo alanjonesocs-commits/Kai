@@ -433,12 +433,12 @@ private fun SettingsTabSelector(
                 ) {
                     Text(
                         text = when (tab) {
-                            SettingsTab.General -> stringResource(Res.string.settings_tab_general)
-                            SettingsTab.Agent -> stringResource(Res.string.settings_tab_agent)
-                            SettingsTab.Services -> stringResource(Res.string.settings_tab_services)
-                            SettingsTab.Tools -> stringResource(Res.string.settings_tab_tools)
-                            SettingsTab.Sandbox -> stringResource(Res.string.settings_tab_sandbox)
-                            SettingsTab.Integrations -> stringResource(Res.string.settings_tab_integrations)
+                            SettingsTab.General -> "CORE"
+                            SettingsTab.Agent -> "NEURAL"
+                            SettingsTab.Services -> "CONNECTIONS"
+                            SettingsTab.Tools -> "CAPABILITIES"
+                            SettingsTab.Sandbox -> "ENVIRONMENT"
+                            SettingsTab.Integrations -> "LINKS"
                         },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         color = MaterialTheme.colorScheme.primary,
