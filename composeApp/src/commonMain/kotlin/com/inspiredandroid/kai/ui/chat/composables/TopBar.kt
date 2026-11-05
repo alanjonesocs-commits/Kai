@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.ui.chat.ChatActions
 import com.inspiredandroid.kai.ui.handCursor
 import kai.composeapp.generated.resources.Res
@@ -79,12 +80,12 @@ internal fun TopBar(
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 androidx.compose.material3.Text(
                     text = "N I A",
-                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 4.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 4.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 androidx.compose.material3.Text(
                     text = "ALIEN INTELLIGENCE SYSTEM",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 androidx.compose.material3.Text(
