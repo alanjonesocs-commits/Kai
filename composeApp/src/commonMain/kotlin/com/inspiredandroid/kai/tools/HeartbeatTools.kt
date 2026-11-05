@@ -32,6 +32,13 @@ object HeartbeatTools {
             val memory = memories.find { it.key == memoryKey }
                 ?: return mapOf("success" to false, "error" to "Memory not found: $memoryKey")
 
+            if (!memory.providerShareAllowed) {
+                return mapOf(
+                    "success" to false,
+                    "error" to "This memory is local-only. Alan must explicitly enable provider sharing before it can be promoted into the soul/system prompt.",
+                )
+            }
+
             // Append to soul text
             val currentSoul = appSettings.getSoulText()
             val newSoul = if (currentSoul.isEmpty()) {
