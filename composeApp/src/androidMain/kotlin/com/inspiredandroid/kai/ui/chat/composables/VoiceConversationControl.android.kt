@@ -207,7 +207,8 @@ actual fun VoiceConversationControl(
                                     "ERROR",
                                     "voice.audio",
                                     "recognition_queue_overflow",
-                                    "Zipformer queue full at 100 ms batch cadence; capacity=500 ms, " +
+                                    "Zipformer queue full at 100 ms batch cadence; capacity=" +
+                                        (PCM_QUEUE_CAPACITY * PCM_BATCH_DURATION_NANOS / 1_000_000L) + " ms, " +
                                         "queued_batches=${queuedBatches.get()}, rejected_samples=${batch.size}. " +
                                         "Session stopped to avoid silent audio loss.",
                                 )
