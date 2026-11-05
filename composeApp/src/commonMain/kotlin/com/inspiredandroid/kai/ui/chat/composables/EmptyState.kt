@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +48,8 @@ import kai.composeapp.generated.resources.privacy_policy
 import kai.composeapp.generated.resources.start_interactive_ui
 import kai.composeapp.generated.resources.welcome_message
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 
 private val TerminalGreenOnDark = Color(0xFF16C60C)
 private val TerminalGreenOnLight = Color(0xFF13A10E)
@@ -62,6 +65,14 @@ internal fun EmptyState(
     onOpenKaiBuild: (() -> Unit)? = null,
     onOpenSystems: () -> Unit = {},
 ) {
+    val niaRuntime = koinInject<NiaRuntimeState>()
+    val runtime by niaRuntime.state.collectAsStateWithLifecycle()
+    val voiceLabel = when (runtime.voicePhase) {
+        com.inspiredandroid.kai.voice.NiaVoicePhase.Idle -> "STANDBY"
+        com.inspiredandroid.kai.voice.NiaVoicePhase.Listening -> "LISTENING"
+        com.inspiredandroid.kai.voice.NiaVoicePhase.Thinking -> "THINKING"
+        com.inspiredandroid.kai.voice.NiaVoicePhase.Speaking -> "SPEAKING"
+    }
     Column(
         modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.Center,
@@ -83,7 +94,7 @@ internal fun EmptyState(
         Spacer(Modifier.height(4.dp))
         HolographicBrain(size = 196.dp)
         Text(
-            text = "NEURAL CORE  /  STANDBY",
+            text = "NEURAL CORE  /  $voiceLabel",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.7.sp),
             color = NiaCyan,
         )
@@ -101,8 +112,8 @@ internal fun EmptyState(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StatusChip("CHAT", NiaCyan)
-            StatusChip("VOICE", NiaViolet)
-            StatusChip("MEMORY", NiaGreen)
+            StatusChip(voiceLabel, NiaViolet)
+            StatusChip("MEMORY ${runtime.memoryEntryCount?.toString() ?: "—"}", NiaGreen)
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(
