@@ -1,6 +1,7 @@
 package com.inspiredandroid.kai.tools
 
 import com.inspiredandroid.kai.data.AppSettings
+import com.inspiredandroid.kai.data.MemoryApprovalStore
 import com.inspiredandroid.kai.data.MemoryStore
 import com.inspiredandroid.kai.network.tools.Tool
 import com.russhwolf.settings.MapSettings
@@ -35,8 +36,11 @@ class ToolDefinitionsTest {
 
     @Test
     fun everyMemoryToolHasADefinition() {
-        val missing = CommonTools.getMemoryTools(MemoryStore(AppSettings(MapSettings())))
-            .map { it.schema.name }
+        val settings = AppSettings(MapSettings())
+        val missing = CommonTools.getMemoryTools(
+            MemoryStore(settings),
+            MemoryApprovalStore(settings),
+        ).map { it.schema.name }
             .filterNot { it in definitionIds }
         assertTrue(missing.isEmpty(), "Memory tools with no ToolInfo: $missing")
     }
