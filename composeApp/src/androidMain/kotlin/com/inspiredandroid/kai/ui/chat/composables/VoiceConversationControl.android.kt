@@ -173,17 +173,20 @@ actual fun VoiceConversationControl(
                     if (pcmFrames.trySend(samples).isFailure) {
                         queuedFrames.decrementAndGet()
                         if (recognitionFailureReported.compareAndSet(false, true)) {
-                        NiaDiagnostics.record(
-                            "ERROR",
-                            "voice.audio",
-                            "recognition_queue_overflow",
-                            "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
-                        )
-                        pcmFrames.close(
-                            IllegalStateException(
-                                "Speech recognition could not keep up with microphone audio. Please try again.",
-                            ),
-                        )
+                            val message = "Speech recognition could not keep up with microphone audio. Please try again."
+                            NiaDiagnostics.record(
+                                "ERROR",
+                                "voice.audio",
+                                "recognition_queue_overflow",
+                                "Speech recognizer could not keep up; session stopped to avoid silent audio loss.",
+                            )
+                            pcmFrames.close(IllegalStateException(message))
+                            // Surface the failure and stop capture. Closing the channel alone
+                            // would leave AudioRecord running and repeatedly reject new frames.
+                            scope.launch {
+                                latestOnError.value(message)
+                                latestOnActiveChange.value(false)
+                            }
                         }
                     }
                 },
