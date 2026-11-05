@@ -38,6 +38,7 @@ import com.inspiredandroid.kai.ui.sandbox.SandboxSessionViewModel
 import com.inspiredandroid.kai.ui.settings.SandboxViewModel
 import com.inspiredandroid.kai.ui.settings.SettingsViewModel
 import com.inspiredandroid.kai.ui.settings.SplinterlandsViewModel
+import com.inspiredandroid.kai.voice.NiaRuntimeState
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -49,6 +50,7 @@ val KAI_BUILD_FILES = named("kaiBuildFiles")
 fun permissionQualifier(permission: AppPermission) = named(permission.name)
 
 val appModule = module {
+    single { NiaRuntimeState() }
     AppPermission.entries.forEach { permission ->
         single(permissionQualifier(permission)) { PermissionController(permission) }
     }
