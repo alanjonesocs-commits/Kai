@@ -1071,41 +1071,38 @@ private fun NiaConversationStatusBar(runtime: NiaRuntimeSnapshot) {
         NiaVoicePhase.Thinking -> Color(0xFFB69CFF)
         NiaVoicePhase.Speaking -> Color(0xFF62F5E5)
     }
-    val sessionLabel = if (runtime.voiceSessionActive) "VOICE SESSION ACTIVE" else "VOICE STANDBY"
+    val sessionLabel = if (runtime.voiceSessionActive) "VOICE ACTIVE" else "VOICE STANDBY"
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.78f))
-            .border(
-                BorderStroke(1.dp, phaseColor.copy(alpha = 0.32f)),
-                RoundedCornerShape(14.dp),
-            )
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f))
+            .border(BorderStroke(1.dp, phaseColor.copy(alpha = 0.28f)), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "NIA NEURAL LINK",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "${runtime.voicePhase.name.uppercase()}  •  $sessionLabel",
+                text = "NIA  •  ${runtime.voicePhase.name.uppercase()}",
                 style = MaterialTheme.typography.labelMedium,
                 color = phaseColor,
             )
+            Text(
+                text = sessionLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = "MIC ${(runtime.waveformAmplitude * 100).toInt()}%",
@@ -1114,8 +1111,8 @@ private fun NiaConversationStatusBar(runtime: NiaRuntimeSnapshot) {
             )
             Box(
                 modifier = Modifier
-                    .width(72.dp)
-                    .height(4.dp)
+                    .weight(1f)
+                    .height(3.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .background(phaseColor.copy(alpha = 0.18f)),
             ) {
