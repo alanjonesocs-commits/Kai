@@ -39,6 +39,7 @@ class NiaRuntimeStateTest {
     @Test
     fun waveformAmplitudeIsClampedToPhysicalRange() {
         val runtime = NiaRuntimeState()
+        runtime.setVoiceSessionActive(true)
 
         runtime.setWaveformAmplitude(-0.2f)
         assertEquals(0f, runtime.state.value.waveformAmplitude)
@@ -71,4 +72,28 @@ class NiaRuntimeStateTest {
         assertEquals(false, runtime.state.value.voiceSessionActive)
     }
 
+    @Test
+    fun waveformIsClearedOutsideListeningAndLateFramesAreIgnored() {
+        val runtime = NiaRuntimeState()
+        runtime.setVoiceSessionActive(true)
+        runtime.setWaveformAmplitude(0.6f)
+        assertEquals(0.6f, runtime.state.value.waveformAmplitude)
+
+        runtime.setVoicePhase(NiaVoicePhase.Thinking)
+        assertEquals(0f, runtime.state.value.waveformAmplitude)
+        runtime.setWaveformAmplitude(0.9f)
+        assertEquals(0f, runtime.state.value.waveformAmplitude)
+
+        runtime.setVoicePhase(NiaVoicePhase.Speaking)
+        runtime.setWaveformAmplitude(0.8f)
+        assertEquals(0f, runtime.state.value.waveformAmplitude)
+
+        runtime.setVoicePhase(NiaVoicePhase.Idle)
+        runtime.setWaveformAmplitude(0.4f)
+        assertEquals(0.4f, runtime.state.value.waveformAmplitude)
+
+        runtime.setVoiceSessionActive(false)
+        runtime.setWaveformAmplitude(0.7f)
+        assertEquals(0f, runtime.state.value.waveformAmplitude)
+    }
 }

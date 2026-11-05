@@ -35,14 +35,15 @@ class NiaRuntimeState {
      */
     fun setVoiceSessionActive(active: Boolean) {
         mutableState.update { current ->
+            val effectivePhase = when {
+                active && current.voicePhase == NiaVoicePhase.Idle -> NiaVoicePhase.Listening
+                !active && current.voicePhase == NiaVoicePhase.Listening -> NiaVoicePhase.Idle
+                else -> current.voicePhase
+            }
             current.copy(
                 voiceSessionActive = active,
-                voicePhase = when {
-                    active && current.voicePhase == NiaVoicePhase.Idle -> NiaVoicePhase.Listening
-                    !active && current.voicePhase == NiaVoicePhase.Listening -> NiaVoicePhase.Idle
-                    else -> current.voicePhase
-                },
-                waveformAmplitude = if (active) current.waveformAmplitude else 0f,
+                voicePhase = effectivePhase,
+                waveformAmplitude = if (active && effectivePhase == NiaVoicePhase.Listening) current.waveformAmplitude else 0f,
             )
         }
     }
@@ -59,13 +60,19 @@ class NiaRuntimeState {
             }
             current.copy(
                 voicePhase = effectivePhase,
-                waveformAmplitude = if (effectivePhase == NiaVoicePhase.Idle) 0f else current.waveformAmplitude,
+                waveformAmplitude = if (effectivePhase == NiaVoicePhase.Listening) current.waveformAmplitude else 0f,
             )
         }
     }
 
     fun setWaveformAmplitude(amplitude: Float) {
-        mutableState.update { it.copy(waveformAmplitude = amplitude.coerceIn(0f, 1f)) }
+        mutableState.update { current ->
+            if (current.voiceSessionActive && current.voicePhase == NiaVoicePhase.Listening) {
+                current.copy(waveformAmplitude = amplitude.coerceIn(0f, 1f))
+            } else {
+                current.copy(waveformAmplitude = 0f)
+            }
+        }
     }
 
     fun updateMemoryStatus(entryCount: Int) {

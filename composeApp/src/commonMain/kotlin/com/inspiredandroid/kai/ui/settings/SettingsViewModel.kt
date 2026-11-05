@@ -279,8 +279,13 @@ class SettingsViewModel(
     }
 
     fun onScreenVisible() {
-        memoryApprovalStore?.let { approvals ->
-            _state.update { it.copy(pendingMemoryApprovals = approvals.getPendingApprovals().toImmutableList()) }
+        val pendingApprovals = memoryApprovalStore?.getPendingApprovals()?.toImmutableList()
+        _state.update { current ->
+            current.copy(
+                memories = dataRepository.getMemories().toImmutableList(),
+                pendingMemoryApprovals = pendingApprovals ?: current.pendingMemoryApprovals,
+                localFreeSpaceBytes = dataRepository.getLocalFreeSpaceBytes(),
+            )
         }
         if (!hasCheckedInitialConnection) {
             hasCheckedInitialConnection = true

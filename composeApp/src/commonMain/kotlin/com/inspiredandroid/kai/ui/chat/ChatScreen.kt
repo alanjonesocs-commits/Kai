@@ -1029,6 +1029,7 @@ private fun ChatModeScreen(
                     assistantReplyText = uiState.history.lastRenderedAssistant()?.content,
                     hasError = uiState.error != null,
                     textToSpeech = textToSpeech,
+                    niaVoiceController = niaVoiceController,
                     onVoiceConversationActiveChange = { isVoiceConversationActive = it },
                 )
             }

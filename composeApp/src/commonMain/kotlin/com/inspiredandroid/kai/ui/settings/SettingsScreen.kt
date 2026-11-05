@@ -397,14 +397,11 @@ private fun SystemStatusCard(
     onOpenConnections: () -> Unit,
     onOpenMemoryVault: () -> Unit,
 ) {
-    val configuredProviders = runtime.configuredProviderCount.takeIf { it > 0 } ?: uiState.configuredServices.size
-    val connectedProviders = if (runtime.configuredProviderCount > 0) {
-        runtime.connectedProviderCount
-    } else {
-        uiState.configuredServices.count { it.connectionStatus == ConnectionStatus.Connected }
-    }
-    val localModels = runtime.localModelCount.takeIf { it > 0 } ?: uiState.localImportedModels.size
-    val memoryCount = runtime.memoryEntryCount.takeIf { it > 0 } ?: uiState.memories.size
+    val configuredProviders = runtime.configuredProviderCount ?: uiState.configuredServices.size
+    val connectedProviders = runtime.connectedProviderCount
+        ?: uiState.configuredServices.count { it.connectionStatus == ConnectionStatus.Connected }
+    val localModels = runtime.localModelCount ?: uiState.localImportedModels.size
+    val memoryCount = runtime.memoryEntryCount ?: uiState.memories.size
     val freeStorage = formatByteCount(uiState.localFreeSpaceBytes)
     val selectedModels = uiState.configuredServices.mapNotNull { service ->
         service.selectedModel?.let { model ->

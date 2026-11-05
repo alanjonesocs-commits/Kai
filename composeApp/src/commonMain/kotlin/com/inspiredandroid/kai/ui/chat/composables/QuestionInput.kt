@@ -69,6 +69,9 @@ import com.inspiredandroid.kai.ui.dynamicui.toSpeakableText
 import com.inspiredandroid.kai.ui.gradientBrush
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.outlineTextFieldColors
+import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaVoiceController
+import com.inspiredandroid.kai.voice.NiaVoicePhase
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -92,6 +95,7 @@ import nl.marc_apps.tts.errors.TextToSpeechSynthesisInterruptedError
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -113,9 +117,11 @@ fun QuestionInput(
     assistantReplyText: String? = null,
     hasError: Boolean = false,
     textToSpeech: TextToSpeechInstance? = null,
+    niaVoiceController: NiaVoiceController? = null,
     onVoiceConversationActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val niaRuntime = koinInject<NiaRuntimeState>()
     var voiceConversationActive by remember { mutableStateOf(false) }
     var awaitingVoiceReply by remember { mutableStateOf(false) }
     var speakingVoiceReply by remember { mutableStateOf(false) }
@@ -126,7 +132,9 @@ fun QuestionInput(
 
     LaunchedEffect(voiceConversationActive) {
         if (voiceConversationActive != wasVoiceConversationActive) {
-            withContext(getBackgroundDispatcher()) { textToSpeech?.stop() }
+            withContext(getBackgroundDispatcher()) {
+                if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
+            }
         }
         wasVoiceConversationActive = voiceConversationActive
     }
@@ -144,11 +152,16 @@ fun QuestionInput(
         if (assistantReplyId != null && assistantReplyId != lastVoiceReplyId && assistantReplyText != null) {
             lastVoiceReplyId = assistantReplyId
             try {
-                if (textToSpeech != null) {
+                if (niaVoiceController != null || textToSpeech != null) {
                     speakingVoiceReply = true
+                    niaRuntime.setVoicePhase(NiaVoicePhase.Speaking)
                     withContext(getBackgroundDispatcher()) {
-                        textToSpeech.stop()
-                        textToSpeech.say(assistantReplyText.toSpeakableText())
+                        if (niaVoiceController != null) {
+                            niaVoiceController.speak(assistantReplyText.toSpeakableText())
+                        } else {
+                            textToSpeech?.stop()
+                            textToSpeech?.say(assistantReplyText.toSpeakableText())
+                        }
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -160,6 +173,7 @@ fun QuestionInput(
             } finally {
                 speakingVoiceReply = false
                 awaitingVoiceReply = false
+                niaRuntime.setVoicePhase(NiaVoicePhase.Idle)
             }
         } else if (hasError) {
             delay(1200)
@@ -375,10 +389,11 @@ fun QuestionInput(
                                     cancel()
                                     voiceScope.launch {
                                         withContext(getBackgroundDispatcher()) {
-                                            textToSpeech?.stop()
+                                            if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
                                         }
                                         speakingVoiceReply = false
                                         awaitingVoiceReply = false
+                                        niaRuntime.setVoicePhase(NiaVoicePhase.Idle)
                                     }
                                 },
                             ) {
