@@ -132,8 +132,20 @@ fun QuestionInput(
 
     LaunchedEffect(voiceConversationActive) {
         if (voiceConversationActive != wasVoiceConversationActive) {
-            withContext(getBackgroundDispatcher()) {
-                if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
+            if (voiceConversationActive && niaVoiceController != null) {
+                try {
+                    // Install and initialise Piper when the single call session starts.
+                    withContext(getBackgroundDispatcher()) { niaVoiceController.prepare() }
+                } catch (failure: Exception) {
+                    voiceError = failure.message ?: "Piper could not be prepared."
+                    niaVoiceController.stop()
+                    voiceConversationActive = false
+                    onVoiceConversationActiveChange(false)
+                }
+            } else {
+                withContext(getBackgroundDispatcher()) {
+                    if (niaVoiceController != null) niaVoiceController.stop() else textToSpeech?.stop()
+                }
             }
         }
         wasVoiceConversationActive = voiceConversationActive
