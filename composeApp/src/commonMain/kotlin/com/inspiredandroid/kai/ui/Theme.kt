@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,39 +33,60 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-// NIA15 visual identity: deep-space surfaces with an electric cyan/violet signal.
-val darkPurple = Color(0xFF35D9F2)
-val lightPurple = Color(0xFF9B8CFF)
+// NIA15 visual identity: an alien signal palette, not a recoloured stock chat app.
+val darkPurple = Color(0xFF62F5E5)
+val lightPurple = Color(0xFFB69CFF)
 val gradientBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-    listOf(Color(0xFF35D9F2), Color(0xFF648BFF), Color(0xFFB18CFF)),
+    listOf(Color(0xFF62F5E5), Color(0xFF648BFF), Color(0xFFB69CFF), Color(0xFFB7FF6A)),
 )
 
-// Animated border gradient colors
-val gradientPurple = Color(0xFF8D7CFF)
-val gradientViolet = Color(0xFF35D9F2)
-val gradientMagenta = Color(0xFFE879F9)
+// Animated signal-border colours.
+val gradientPurple = Color(0xFFB69CFF)
+val gradientViolet = Color(0xFF62F5E5)
+val gradientMagenta = Color(0xFFB7FF6A)
 
 fun Modifier.handCursor() = pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
 
 val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF55DDF2),
-    onPrimary = Color(0xFF04131B),
-    secondary = Color(0xFFA99BFF),
-    onSecondary = Color(0xFF17112E),
-    tertiary = Color(0xFFE879F9),
-    background = Color(0xFF080D18),
-    onBackground = Color(0xFFEAF4FF),
-    surface = Color(0xFF0D1524),
-    onSurface = Color(0xFFEAF4FF),
-    surfaceVariant = Color(0xFF172338),
-    onSurfaceVariant = Color(0xFFB6C7DA),
-    outline = Color(0xFF36516B),
-    outlineVariant = Color(0xFF24364D),
+    primary = Color(0xFF62F5E5),
+    onPrimary = Color(0xFF031413),
+    secondary = Color(0xFFB69CFF),
+    onSecondary = Color(0xFF160D2B),
+    tertiary = Color(0xFFB7FF6A),
+    background = Color(0xFF05090F),
+    onBackground = Color(0xFFE8FFF9),
+    surface = Color(0xFF0A141B),
+    onSurface = Color(0xFFE8FFF9),
+    surfaceVariant = Color(0xFF10232A),
+    onSurfaceVariant = Color(0xFFA8C9C7),
+    outline = Color(0xFF286A6C),
+    outlineVariant = Color(0xFF183D45),
 )
+
+private val NiaTypography: Typography = Typography().let { base ->
+    Typography(
+        displayLarge = base.displayLarge.copy(fontFamily = FontFamily.Monospace),
+        displayMedium = base.displayMedium.copy(fontFamily = FontFamily.Monospace),
+        displaySmall = base.displaySmall.copy(fontFamily = FontFamily.Monospace),
+        headlineLarge = base.headlineLarge.copy(fontFamily = FontFamily.Monospace),
+        headlineMedium = base.headlineMedium.copy(fontFamily = FontFamily.Monospace),
+        headlineSmall = base.headlineSmall.copy(fontFamily = FontFamily.Monospace),
+        titleLarge = base.titleLarge.copy(fontFamily = FontFamily.Monospace),
+        titleMedium = base.titleMedium.copy(fontFamily = FontFamily.Monospace),
+        titleSmall = base.titleSmall.copy(fontFamily = FontFamily.Monospace),
+        bodyLarge = base.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+        bodyMedium = base.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        bodySmall = base.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        labelLarge = base.labelLarge.copy(fontFamily = FontFamily.Monospace),
+        labelMedium = base.labelMedium.copy(fontFamily = FontFamily.Monospace),
+        labelSmall = base.labelSmall.copy(fontFamily = FontFamily.Monospace),
+    )
+}
 
 fun ColorScheme.withBlackBackground(): ColorScheme = copy(
     background = Color.Black,
@@ -200,6 +222,7 @@ fun Theme(
 ) {
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = NiaTypography,
     ) {
         content()
     }
