@@ -68,6 +68,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import com.inspiredandroid.kai.voice.NiaVoiceController
+import kotlinx.coroutines.CancellationException
 import nl.marc_apps.tts.TextToSpeechInstance
 import nl.marc_apps.tts.errors.TextToSpeechSynthesisInterruptedError
 import org.jetbrains.compose.resources.stringResource
@@ -76,6 +78,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun BotMessage(
     message: String,
     textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController? = null,
     isSpeaking: Boolean,
     setIsSpeaking: (Boolean) -> Unit,
     onRegenerate: (() -> Unit)? = null,
@@ -169,20 +172,30 @@ internal fun BotMessage(
     }
     if (message.isEmpty()) return
     Row(Modifier.padding(horizontal = 8.dp)) {
-        if (textToSpeech != null) {
+        if (textToSpeech != null || niaVoiceController != null) {
             val componentScope = rememberCoroutineScope()
             SmallIconButton(
                 iconResource = if (isSpeaking) Res.drawable.ic_stop else Res.drawable.ic_volume_up,
                 contentDescription = stringResource(Res.string.bot_message_speech_content_description),
                 onClick = {
                     componentScope.launch(getBackgroundDispatcher()) {
-                        textToSpeech.stop()
+                        if (niaVoiceController != null) {
+                            niaVoiceController.stop()
+                        } else {
+                            textToSpeech?.stop()
+                        }
                         if (isSpeaking) {
                             setIsSpeaking(false)
                         } else {
                             setIsSpeaking(true)
                             try {
-                                textToSpeech.say(text = message.toSpeakableText())
+                                if (niaVoiceController != null) {
+                                    niaVoiceController.speak(message.toSpeakableText())
+                                } else {
+                                    textToSpeech?.say(text = message.toSpeakableText())
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
                             } catch (ignore: TextToSpeechSynthesisInterruptedError) {
                                 // Expected interruption - no action needed
                             } catch (e: Exception) {
