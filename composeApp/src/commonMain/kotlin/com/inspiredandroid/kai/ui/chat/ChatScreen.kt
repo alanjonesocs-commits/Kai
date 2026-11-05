@@ -110,6 +110,7 @@ import com.inspiredandroid.kai.ui.markdown.parseMarkdown
 import com.inspiredandroid.kai.ui.sandbox.SandboxTabsContent
 import com.inspiredandroid.kai.ui.settings.SandboxUiState
 import com.inspiredandroid.kai.ui.settings.SandboxViewModel
+import com.inspiredandroid.kai.voice.NiaVoiceController
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.fallback_answered_by
 import kai.composeapp.generated.resources.fallback_service_failed
@@ -136,6 +137,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun ChatScreen(
     viewModel: ChatViewModel = koinViewModel(),
     textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController? = null,
     onNavigateToSettings: () -> Unit,
     isSandboxAvailable: Boolean = false,
     isKaiBuildAvailable: Boolean = false,
@@ -146,6 +148,7 @@ fun ChatScreen(
     ChatScreenContent(
         uiState = uiState,
         textToSpeech = textToSpeech,
+        niaVoiceController = niaVoiceController,
         onNavigateToSettings = onNavigateToSettings,
         isSandboxAvailable = isSandboxAvailable,
         isKaiBuildAvailable = isKaiBuildAvailable,
@@ -157,6 +160,7 @@ fun ChatScreen(
 fun ChatScreenContent(
     uiState: ChatUiState,
     textToSpeech: TextToSpeechInstance? = null,
+    niaVoiceController: NiaVoiceController? = null,
     onNavigateToSettings: () -> Unit = {},
     isSandboxAvailable: Boolean = false,
     isKaiBuildAvailable: Boolean = false,
@@ -186,6 +190,7 @@ fun ChatScreenContent(
         else -> ChatModeScreen(
             uiState = uiState,
             textToSpeech = textToSpeech,
+            niaVoiceController = niaVoiceController,
             onNavigateToSettings = onNavigateToSettings,
             isSandboxAvailable = isSandboxAvailable,
             onOpenKaiBuild = { isKaiBuildOpen = true }.takeIf { isKaiBuildAvailable },
@@ -497,6 +502,7 @@ private fun InteractiveModeContent(
 private fun ChatModeScreen(
     uiState: ChatUiState,
     textToSpeech: TextToSpeechInstance?,
+    niaVoiceController: NiaVoiceController?,
     onNavigateToSettings: () -> Unit,
     isSandboxAvailable: Boolean,
     onOpenKaiBuild: (() -> Unit)?,
@@ -706,10 +712,18 @@ private fun ChatModeScreen(
                                     val lastMessage = history.last()
                                     if (!isVoiceConversationActive && uiState.isSpeechOutputEnabled && lastMessage.role == History.Role.ASSISTANT) {
                                         componentScope.launch(getBackgroundDispatcher()) {
-                                            textToSpeech?.stop()
+                                            if (niaVoiceController != null) {
+                                                niaVoiceController.stop()
+                                            } else {
+                                                textToSpeech?.stop()
+                                            }
                                             uiState.actions.setIsSpeaking(true, lastMessage.id)
                                             try {
-                                                textToSpeech?.say(lastMessage.content.toSpeakableText())
+                                                if (niaVoiceController != null) {
+                                                    niaVoiceController.speak(lastMessage.content.toSpeakableText())
+                                                } else {
+                                                    textToSpeech?.say(lastMessage.content.toSpeakableText())
+                                                }
                                             } catch (_: TextToSpeechSynthesisInterruptedError) {
                                                 // Speech was interrupted by user
                                             } catch (_: Exception) {
