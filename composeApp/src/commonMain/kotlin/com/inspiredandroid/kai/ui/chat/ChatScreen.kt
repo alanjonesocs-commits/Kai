@@ -66,6 +66,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -555,6 +557,28 @@ private fun ChatModeScreen(
     }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).navigationBarsPadding().statusBarsPadding().imePadding()) {
+        // Subtle aurora layers give the conversation a spatial, holographic feel
+        // without reducing contrast or intercepting any chat interactions.
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .size(340.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), Color.Transparent),
+                    ),
+                ),
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomStart)
+                .size(300.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f), Color.Transparent),
+                    ),
+                ),
+        )
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 textToSpeech = textToSpeech,
