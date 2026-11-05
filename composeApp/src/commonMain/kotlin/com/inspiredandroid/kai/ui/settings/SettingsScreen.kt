@@ -128,6 +128,9 @@ fun SettingsScreen(
     navigationTabBar: (@Composable () -> Unit)? = null,
     niaVoiceController: NiaVoiceController? = null,
     initialTab: SettingsTab = SettingsTab.Services,
+    screenTitle: String = "N I A   /   SYSTEM CONTROL",
+    screenSubtitle: String = "CONFIGURATION  •  CONNECTIONS  •  MEMORY VAULT",
+    showSectionTabs: Boolean = true,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
@@ -204,6 +207,9 @@ fun SettingsScreen(
         navigationTabBar = navigationTabBar,
         runtimeSnapshot = runtimeSnapshot,
         onPrepareAndTestVoice = onPrepareAndTestVoice,
+        screenTitle = screenTitle,
+        screenSubtitle = screenSubtitle,
+        showSectionTabs = showSectionTabs,
     )
 }
 
@@ -223,6 +229,9 @@ fun SettingsScreenContent(
     runtimeSnapshot: NiaRuntimeSnapshot = NiaRuntimeSnapshot(),
     onPrepareAndTestVoice: (() -> Unit)? = null,
     navigationTabBar: (@Composable () -> Unit)? = null,
+    screenTitle: String = "N I A   /   SYSTEM CONTROL",
+    screenSubtitle: String = "CONFIGURATION  •  CONNECTIONS  •  MEMORY VAULT",
+    showSectionTabs: Boolean = true,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(Res.string.snackbar_undo)
@@ -304,12 +313,12 @@ fun SettingsScreenContent(
                 horizontalAlignment = CenterHorizontally,
             ) {
                 Text(
-                    text = "N I A   /   SYSTEM CONTROL",
+                    text = screenTitle,
                     style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 2.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "CONFIGURATION  •  CONNECTIONS  •  MEMORY VAULT",
+                    text = screenSubtitle,
                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -320,11 +329,13 @@ fun SettingsScreenContent(
                 SettingsTab.entries.filter { it != SettingsTab.Sandbox || sandboxState.showSandbox }.toImmutableList()
             }
 
-            SettingsTabSelector(
-                tabs = visibleTabs,
-                currentTab = filteredUiState.currentTab,
-                onSelectTab = actions.onSelectTab,
-            )
+            if (showSectionTabs) {
+                SettingsTabSelector(
+                    tabs = visibleTabs,
+                    currentTab = filteredUiState.currentTab,
+                    onSelectTab = actions.onSelectTab,
+                )
+            }
 
             SystemStatusCard(
                 uiState = filteredUiState,
@@ -332,6 +343,7 @@ fun SettingsScreenContent(
                 onOpenConnections = { actions.onSelectTab(SettingsTab.Services) },
                 onOpenMemoryVault = { actions.onSelectTab(SettingsTab.Agent) },
                 onPrepareAndTestVoice = onPrepareAndTestVoice,
+                showNavigationActions = showSectionTabs,
             )
 
             val settingsScrollState = rememberScrollState()
@@ -439,6 +451,7 @@ private fun SystemStatusCard(
     onOpenConnections: () -> Unit,
     onOpenMemoryVault: () -> Unit,
     onPrepareAndTestVoice: (() -> Unit)?,
+    showNavigationActions: Boolean = true,
 ) {
     val configuredProviders = runtime.configuredProviderCount ?: uiState.configuredServices.size
     val connectedProviders = runtime.connectedProviderCount
@@ -508,11 +521,13 @@ private fun SystemStatusCard(
                     )
                 }
             }
-            TextButton(onClick = onOpenConnections, modifier = Modifier.handCursor()) {
-                Text("Connections")
-            }
-            TextButton(onClick = onOpenMemoryVault, modifier = Modifier.handCursor()) {
-                Text("Memory vault")
+            if (showNavigationActions) {
+                TextButton(onClick = onOpenConnections, modifier = Modifier.handCursor()) {
+                    Text("Connections")
+                }
+                TextButton(onClick = onOpenMemoryVault, modifier = Modifier.handCursor()) {
+                    Text("Memory vault")
+                }
             }
         }
     }
