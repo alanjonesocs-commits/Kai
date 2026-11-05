@@ -35,6 +35,7 @@ litert-lm = "0.18.1"
 sqldelight = "2.4.1"
 materialIcons = "1.7.3"
 xz = "1.12"
+commonsCompress = "1.27.1"
 sherpaOnnx = "v1.13.8"
 
 [libraries]
@@ -91,6 +92,7 @@ compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.r
 bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 # LXC Debian rootfs for Kai Build ships as .tar.xz
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 litert-lm = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litert-lm" }
 litert-lm-jvm = { module = "com.google.ai.edge.litertlm:litertlm-jvm", version.ref = "litert-lm" }
