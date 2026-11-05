@@ -700,6 +700,7 @@ private fun ChatModeScreen(
                                 onStartInteractiveMode = uiState.actions.enterInteractiveMode
                                     .takeUnless { primaryIsOnDevice },
                                 onOpenKaiBuild = onOpenKaiBuild,
+                                onOpenSystems = onNavigateToSettings,
                             )
                         } else {
                             val listState = rememberLazyListState()
