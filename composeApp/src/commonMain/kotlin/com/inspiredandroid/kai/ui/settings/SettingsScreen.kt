@@ -368,7 +368,11 @@ fun SettingsScreenContent(
                             }
 
                             SettingsTab.Agent -> {
-                                AgentContent(uiState = filteredUiState, actions = actions)
+                                AgentContent(
+                                    uiState = filteredUiState,
+                                    actions = actions,
+                                    memoryOnly = !showSectionTabs,
+                                )
                             }
 
                             SettingsTab.Services -> {
