@@ -353,7 +353,7 @@ private fun MemoryList(
                     Spacer(Modifier.height(2.dp))
                     Text(proposal.content, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        text = if (proposal.isSensitive) "Sensitive candidate · local-only · not saved" else "Local-only · not saved",
+                        text = "Local-only by default · not saved",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
