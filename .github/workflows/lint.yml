@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -50,28 +50,14 @@ jobs:
         with:
           gradle-version: "9.8.2"
 
-      - name: Apply Kotlin formatting
-        run: gradle spotlessApply --no-daemon --stacktrace
-
       - name: Verify Kotlin formatting
-        run: ./gradlew spotlessCheck --no-daemon --stacktrace
+        run: gradle spotlessCheck --no-daemon --stacktrace
 
       - name: Run common desktop test suite
-        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+        run: gradle :composeApp:desktopTest --no-daemon --stacktrace
 
       - name: Compile Android FOSS debug APK
-        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
-
-      - name: Ensure formatter produced a clean tree
-        run: |
-          if git diff --quiet; then
-            echo "Formatting is clean."
-          else
-            echo "::error::Spotless changed files during CI. Commit the formatting changes before rerunning CI."
-            git diff --check
-            git diff --name-only
-            exit 1
-          fi
+        run: gradle :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
 
       - name: Upload Pixel installation APK
         uses: actions/upload-artifact@v4
