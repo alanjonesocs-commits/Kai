@@ -6,6 +6,9 @@ import com.inspiredandroid.kai.DaemonController
 import com.inspiredandroid.kai.Platform
 import com.inspiredandroid.kai.currentPlatform
 import com.inspiredandroid.kai.data.DataRepository
+import com.inspiredandroid.kai.data.MemoryStore
+import com.inspiredandroid.kai.data.MemoryApprovalStore
+import com.inspiredandroid.kai.data.PendingMemoryApproval
 import com.inspiredandroid.kai.data.ImportSection
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.data.TaskScheduler
@@ -70,6 +73,8 @@ class SettingsViewModel(
     private val taskScheduler: TaskScheduler,
     private val backgroundDispatcher: CoroutineContext = getBackgroundDispatcher(),
     private val localNetworkPermissionController: PermissionController = PermissionController(AppPermission.LOCAL_NETWORK),
+    private val memoryStore: MemoryStore? = null,
+    private val memoryApprovalStore: MemoryApprovalStore? = null,
 ) : ViewModel() {
 
     private var connectionCheckJobs: MutableMap<String, Job> = mutableMapOf()
@@ -85,6 +90,7 @@ class SettingsViewModel(
         themeMode = dataRepository.getThemeMode(),
         isMemoryEnabled = dataRepository.isMemoryEnabled(),
         memories = dataRepository.getMemories().toImmutableList(),
+        pendingMemoryApprovals = memoryApprovalStore?.getPendingApprovals()?.toImmutableList() ?: emptyList<PendingMemoryApproval>().toImmutableList(),
         isSchedulingEnabled = dataRepository.isSchedulingEnabled(),
         scheduledTasks = dataRepository.getScheduledTasks().toImmutableList(),
         isDaemonEnabled = dataRepository.isDaemonEnabled(),
@@ -159,6 +165,9 @@ class SettingsViewModel(
         onToggleMemory = ::onToggleMemory,
         onDeleteMemory = ::onDeleteMemory,
         onUpdateMemory = ::onUpdateMemory,
+        onApproveMemory = ::onApproveMemory,
+        onRejectMemory = ::onRejectMemory,
+        onToggleMemoryProviderShare = ::onToggleMemoryProviderShare,
         onToggleScheduling = ::onToggleScheduling,
         onCancelTask = ::onCancelTask,
         onToggleDaemon = ::onToggleDaemon,
@@ -520,6 +529,35 @@ class SettingsViewModel(
     private fun onUpdateMemory(id: String, content: String) {
         viewModelScope.launch(backgroundDispatcher) {
             dataRepository.updateMemoryContent(id, content)
+            _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
+        }
+    }
+
+    private fun onApproveMemory(id: String) {
+        val approvals = memoryApprovalStore ?: return
+        val store = memoryStore ?: return
+        viewModelScope.launch(backgroundDispatcher) {
+            approvals.approve(id, store)
+            _state.update {
+                it.copy(
+                    memories = dataRepository.getMemories().toImmutableList(),
+                    pendingMemoryApprovals = approvals.getPendingApprovals().toImmutableList(),
+                )
+            }
+        }
+    }
+
+    private fun onRejectMemory(id: String) {
+        val approvals = memoryApprovalStore ?: return
+        viewModelScope.launch(backgroundDispatcher) {
+            approvals.reject(id)
+            _state.update { it.copy(pendingMemoryApprovals = approvals.getPendingApprovals().toImmutableList()) }
+        }
+    }
+
+    private fun onToggleMemoryProviderShare(id: String, allowed: Boolean) {
+        viewModelScope.launch(backgroundDispatcher) {
+            dataRepository.setMemoryProviderShareAllowed(id, allowed)
             _state.update { it.copy(memories = dataRepository.getMemories().toImmutableList()) }
         }
     }
