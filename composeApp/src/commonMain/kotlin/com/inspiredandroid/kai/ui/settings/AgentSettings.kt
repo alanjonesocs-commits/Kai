@@ -90,8 +90,15 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
 @Composable
-internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
-    StaggeredSettingsColumns(
+internal fun AgentContent(
+    uiState: SettingsUiState,
+    actions: SettingsActions,
+    memoryOnly: Boolean = false,
+) {
+    if (memoryOnly) {
+        MemoryVaultCard(uiState, actions)
+    } else {
+        StaggeredSettingsColumns(
         start = {
             SettingsCard {
                 SoulEditor(
@@ -108,19 +115,7 @@ internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
                     onToggleScheduling = actions.onToggleScheduling,
                 )
             }
-            SettingsCard {
-                MemoryList(
-                    memories = uiState.memories,
-                    pendingApprovals = uiState.pendingMemoryApprovals,
-                    onDeleteMemory = actions.onDeleteMemory,
-                    onUpdateMemory = actions.onUpdateMemory,
-                    onApproveMemory = actions.onApproveMemory,
-                    onRejectMemory = actions.onRejectMemory,
-                    onToggleProviderShare = actions.onToggleMemoryProviderShare,
-                    isMemoryEnabled = uiState.isMemoryEnabled,
-                    onToggleMemory = actions.onToggleMemory,
-                )
-            }
+            MemoryVaultCard(uiState, actions)
         },
         end = {
             SettingsCard {
@@ -193,7 +188,28 @@ internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
                 }
             }
         },
-    )
+        )
+    }
+}
+
+@Composable
+private fun MemoryVaultCard(
+    uiState: SettingsUiState,
+    actions: SettingsActions,
+) {
+    SettingsCard {
+        MemoryList(
+            memories = uiState.memories,
+            pendingApprovals = uiState.pendingMemoryApprovals,
+            onDeleteMemory = actions.onDeleteMemory,
+            onUpdateMemory = actions.onUpdateMemory,
+            onApproveMemory = actions.onApproveMemory,
+            onRejectMemory = actions.onRejectMemory,
+            onToggleProviderShare = actions.onToggleMemoryProviderShare,
+            isMemoryEnabled = uiState.isMemoryEnabled,
+            onToggleMemory = actions.onToggleMemory,
+        )
+    }
 }
 
 @Composable
