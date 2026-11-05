@@ -36,24 +36,34 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-val darkPurple = Color(0xFF6200EE)
-val lightPurple = Color(0xff8063C5)
-val gradientBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(darkPurple, lightPurple))
+// NIA15 visual identity: deep-space surfaces with an electric cyan/violet signal.
+val darkPurple = Color(0xFF35D9F2)
+val lightPurple = Color(0xFF9B8CFF)
+val gradientBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+    listOf(Color(0xFF35D9F2), Color(0xFF648BFF), Color(0xFFB18CFF)),
+)
 
 // Animated border gradient colors
-val gradientPurple = Color(0xFF9C27B0)
-val gradientViolet = Color(0xFF7C4DFF)
-val gradientMagenta = Color(0xFFE040FB)
+val gradientPurple = Color(0xFF8D7CFF)
+val gradientViolet = Color(0xFF35D9F2)
+val gradientMagenta = Color(0xFFE879F9)
 
 fun Modifier.handCursor() = pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
 
 val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFBB86FC),
-    onPrimary = Color(0xFF000000),
-    surface = Color(0xFF1E1E1E),
-    background = Color(0xFF121212),
-    onBackground = Color(0xFFFFFFFF),
-    onSurface = Color(0xFFFFFFFF),
+    primary = Color(0xFF55DDF2),
+    onPrimary = Color(0xFF04131B),
+    secondary = Color(0xFFA99BFF),
+    onSecondary = Color(0xFF17112E),
+    tertiary = Color(0xFFE879F9),
+    background = Color(0xFF080D18),
+    onBackground = Color(0xFFEAF4FF),
+    surface = Color(0xFF0D1524),
+    onSurface = Color(0xFFEAF4FF),
+    surfaceVariant = Color(0xFF172338),
+    onSurfaceVariant = Color(0xFFB6C7DA),
+    outline = Color(0xFF36516B),
+    outlineVariant = Color(0xFF24364D),
 )
 
 fun ColorScheme.withBlackBackground(): ColorScheme = copy(
@@ -99,12 +109,19 @@ fun Modifier.kaiAdaptiveCardSurface(shape: Shape = CardDefaults.shape): Modifier
     )
 
 val LightColorScheme = lightColorScheme(
-    primary = darkPurple,
+    primary = Color(0xFF087F9B),
     onPrimary = Color(0xFFFFFFFF),
-    surface = Color(0xFFF2F2F2),
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF000000),
-    onSurface = Color(0xFF000000),
+    secondary = Color(0xFF6254B5),
+    onSecondary = Color(0xFFFFFFFF),
+    tertiary = Color(0xFF9A3DA8),
+    surface = Color(0xFFF2F7FC),
+    onSurface = Color(0xFF122033),
+    background = Color(0xFFF7FAFE),
+    onBackground = Color(0xFF101C2D),
+    surfaceVariant = Color(0xFFE3EDF6),
+    onSurfaceVariant = Color(0xFF40566D),
+    outline = Color(0xFF8299AE),
+    outlineVariant = Color(0xFFCAD8E5),
 )
 
 @Composable
