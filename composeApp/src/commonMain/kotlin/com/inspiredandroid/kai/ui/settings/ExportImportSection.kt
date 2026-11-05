@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.data.ImportSection
 import com.inspiredandroid.kai.data.SharedJson
 import com.inspiredandroid.kai.data.detectImportSections
@@ -215,7 +216,7 @@ internal fun ExportImportSection(
     Spacer(Modifier.height(24.dp))
     Text(
         text = "MEMORY VAULT  /  NIA PORTABLE ARCHIVE",
-        style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.1.dp),
+        style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 1.1.sp),
         color = MaterialTheme.colorScheme.primary,
     )
     Spacer(Modifier.height(4.dp))
