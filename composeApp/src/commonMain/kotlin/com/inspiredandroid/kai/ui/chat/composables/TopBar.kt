@@ -84,15 +84,15 @@ internal fun TopBar(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 androidx.compose.material3.Text(
-                    text = "ALIEN INTELLIGENCE SYSTEM",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                    text = "NATURAL INTELLIGENCE ASSISTANT",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.7.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 androidx.compose.material3.Text(
                     text = when {
-                        isSpeaking -> "VOICE TRANSMITTING"
-                        isSpeechOutputEnabled -> "VOICE OUTPUT ENABLED"
-                        else -> "NEURAL INTERFACE"
+                        isSpeaking -> "VOICE CHANNEL  /  TRANSMITTING"
+                        isSpeechOutputEnabled -> "VOICE CHANNEL  /  READY"
+                        else -> "NEURAL LINK  /  STANDBY"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
