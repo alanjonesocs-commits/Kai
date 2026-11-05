@@ -18,8 +18,6 @@ data class PendingMemoryApproval(
     val source: String? = null,
     val sourceConversationId: String? = null,
     val createdAt: Long,
-    /** Suggestions are treated as sensitive and local-only until the user reviews them. */
-    val isSensitive: Boolean = true,
 )
 
 /**
