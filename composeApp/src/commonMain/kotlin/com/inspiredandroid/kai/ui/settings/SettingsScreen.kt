@@ -81,6 +81,7 @@ import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors
 import com.inspiredandroid.kai.voice.NiaRuntimeState
+import com.inspiredandroid.kai.voice.NiaRuntimeSnapshot
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.github_mark
 import kai.composeapp.generated.resources.settings_ai_mistakes_warning
@@ -123,6 +124,7 @@ fun SettingsScreen(
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
     val niaRuntime = koinInject<NiaRuntimeState>()
+    val runtimeSnapshot by niaRuntime.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.memories, uiState.configuredServices, uiState.localImportedModels) {
         niaRuntime.updateMemoryStatus(uiState.memories.size)
@@ -157,6 +159,7 @@ fun SettingsScreen(
         onMigrateHome = sandboxViewModel::onMigrateHome,
         onNavigateBack = onNavigateBack,
         navigationTabBar = navigationTabBar,
+        runtimeSnapshot = runtimeSnapshot,
     )
 }
 
@@ -174,6 +177,7 @@ fun SettingsScreenContent(
     onMigrateHome: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
     navigationTabBar: (@Composable () -> Unit)? = null,
+    runtimeSnapshot: NiaRuntimeSnapshot = NiaRuntimeSnapshot(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(Res.string.snackbar_undo)
@@ -277,6 +281,13 @@ fun SettingsScreenContent(
                 onSelectTab = actions.onSelectTab,
             )
 
+            SystemStatusCard(
+                uiState = filteredUiState,
+                runtime = runtimeSnapshot,
+                onOpenConnections = { actions.onSelectTab(SettingsTab.Services) },
+                onOpenMemoryVault = { actions.onSelectTab(SettingsTab.Agent) },
+            )
+
             val settingsScrollState = rememberScrollState()
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Column(
@@ -373,6 +384,91 @@ fun SettingsScreenContent(
             Snackbar(snackbarData = data)
         }
     }
+}
+
+@Composable
+private fun SystemStatusCard(
+    uiState: SettingsUiState,
+    runtime: NiaRuntimeSnapshot,
+    onOpenConnections: () -> Unit,
+    onOpenMemoryVault: () -> Unit,
+) {
+    val configuredProviders = runtime.configuredProviderCount ?: uiState.configuredServices.size
+    val connectedProviders = runtime.connectedProviderCount
+        ?: uiState.configuredServices.count { it.connectionStatus == ConnectionStatus.Connected }
+    val localModels = runtime.localModelCount ?: uiState.localImportedModels.size
+    val memoryCount = runtime.memoryEntryCount ?: uiState.memories.size
+    val freeStorage = formatByteCount(uiState.localFreeSpaceBytes)
+    val selectedModels = uiState.configuredServices.mapNotNull { service ->
+        service.selectedModel?.let { model ->
+            "${service.service.displayName}: ${model.displayName ?: model.id}"
+        }
+    }
+
+    SettingsCard(modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(
+            text = "LIVE SYSTEM TELEMETRY",
+            style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.4.sp),
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(10.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            SystemMetric("VOICE", runtime.voicePhase.name.uppercase())
+            SystemMetric("SESSION", if (runtime.voiceSessionActive) "ACTIVE" else "INACTIVE")
+            SystemMetric("MIC RMS", "${(runtime.waveformAmplitude * 100).toInt()}%")
+            SystemMetric("PROVIDERS", "$connectedProviders / $configuredProviders")
+            SystemMetric("LOCAL MODELS", localModels.toString())
+            SystemMetric("MEMORY", memoryCount.toString())
+            SystemMetric("FREE STORAGE", freeStorage)
+        }
+        if (selectedModels.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "SELECTED MODELS  /  ${selectedModels.joinToString("  •  ")}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onOpenConnections, modifier = Modifier.handCursor()) {
+                Text("Connections")
+            }
+            TextButton(onClick = onOpenMemoryVault, modifier = Modifier.handCursor()) {
+                Text("Memory vault")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SystemMetric(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+private fun formatByteCount(bytes: Long): String {
+    if (bytes <= 0L) return "NOT REPORTED"
+    val units = listOf("B", "KB", "MB", "GB", "TB")
+    var value = bytes.toDouble()
+    var unitIndex = 0
+    while (value >= 1024.0 && unitIndex < units.lastIndex) {
+        value /= 1024.0
+        unitIndex++
+    }
+    return "${(value * 10).toInt() / 10.0} ${units[unitIndex]}"
 }
 
 @Composable
