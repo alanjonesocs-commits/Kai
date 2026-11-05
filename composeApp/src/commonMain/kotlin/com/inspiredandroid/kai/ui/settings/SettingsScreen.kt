@@ -492,7 +492,11 @@ private fun SystemStatusCard(
                     Text(
                         if (runtime.voiceOutputStatus == NiaVoiceOutputStatus.PiperInstalled ||
                             runtime.voiceOutputStatus == NiaVoiceOutputStatus.PiperReady
-                        ) "TEST VOICE" else "INSTALL & TEST VOICE",
+                        ) {
+                            "TEST VOICE"
+                        } else {
+                            "INSTALL & TEST VOICE"
+                        },
                     )
                 }
             }
