@@ -29,6 +29,7 @@ private val knownKaiKeys = setOf(
     "resolutionStatus",
     "sourceConversationId",
     "provenance",
+    "providerShareAllowed",
 )
 
 @OptIn(ExperimentalTime::class)
@@ -52,6 +53,7 @@ fun MemoryEntry.toPamEpisode(): PamEpisode = PamEpisode(
     resolutionStatus = resolutionStatus.name,
     sourceConversationId = sourceConversationId,
     provenance = provenance,
+    providerShareAllowed = providerShareAllowed,
 )
 
 fun PamEpisode.toMemoryEntry(): MemoryEntry {
@@ -71,7 +73,8 @@ fun PamEpisode.toMemoryEntry(): MemoryEntry {
         resolutionStatus = MemoryAssessment.entries.firstOrNull { it.name == resolutionStatus } ?: MemoryAssessment.UNKNOWN,
         sourceConversationId = sourceConversationId,
         provenance = provenance,
-    )
+        providerShareAllowed = providerShareAllowed,
+)
 }
 
 fun memoriesToBundle(entries: List<MemoryEntry>, nowIso: String, previous: MemBundle? = null): MemBundle {
@@ -139,6 +142,7 @@ fun kaiJsonToMemBundle(kaiSettingsJson: String, nowIso: String): MemBundle {
                     kaiJson.decodeFromJsonElement<List<com.inspiredandroid.kai.data.MemoryProvenance>>(element)
                 }.getOrNull()
             }.orEmpty(),
+            providerShareAllowed = obj["providerShareAllowed"]?.jsonPrimitive?.booleanOrNull ?: false,
             extra = extra,
         )
     }
@@ -184,6 +188,7 @@ fun memBundleToKaiJson(bundle: MemBundle, originalKaiJson: String): String {
                 if (ep.provenance.isNotEmpty()) {
                     put("provenance", kaiJson.encodeToJsonElement(ep.provenance))
                 }
+                put("providerShareAllowed", ep.providerShareAllowed)
                 ep.extra.forEach { (k, v) -> put(k, v) }
             }
         },
