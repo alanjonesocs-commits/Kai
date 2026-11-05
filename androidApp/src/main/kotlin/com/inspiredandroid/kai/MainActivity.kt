@@ -31,9 +31,6 @@ import com.inspiredandroid.kai.voice.AndroidNiaVoiceController
 import com.inspiredandroid.kai.voice.NiaRuntimeState
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
-import nl.marc_apps.tts.TextToSpeechEngine
-import nl.marc_apps.tts.TextToSpeechFactory
-import nl.marc_apps.tts.TextToSpeechInstance
 import org.koin.android.ext.android.get
 
 class MainActivity : ComponentActivity() {
@@ -79,16 +76,9 @@ class MainActivity : ComponentActivity() {
             val lightScheme: ColorScheme = if (dynamicColor) dynamicLightColorScheme(context) else LightColorScheme
             val darkScheme: ColorScheme = if (dynamicColor) dynamicDarkColorScheme(context) else DarkColorScheme
             val navController = rememberNavController()
-            // Defer TTS initialization until after the first frame
-            var ttsReady by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) { ttsReady = true }
-            val textToSpeech = if (ttsReady) {
-                rememberSystemTextToSpeechOrNull()
-            } else {
-                null
-            }
-            val niaVoiceController = remember(context, textToSpeech, niaRuntime) {
-                AndroidNiaVoiceController(context.applicationContext, textToSpeech, niaRuntime)
+            // Nia has one speech-output engine: local Piper. Do not initialise Android system TTS.
+            val niaVoiceController = remember(context, niaRuntime) {
+                AndroidNiaVoiceController(context.applicationContext, null, niaRuntime)
             }
             DisposableEffect(niaVoiceController) {
                 onDispose { niaVoiceController.close() }
@@ -97,7 +87,7 @@ class MainActivity : ComponentActivity() {
                 navController = navController,
                 lightColorScheme = lightScheme,
                 darkColorScheme = darkScheme,
-                textToSpeech = textToSpeech,
+                textToSpeech = null,
                 niaVoiceController = niaVoiceController,
                 isKoinStarted = true,
                 onAppOpens = { appOpens ->
@@ -169,32 +159,6 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(Intent.EXTRA_TEXT)
         }
     }
-}
-
-/**
- * Speaks with the engine the user selected in the system text-to-speech settings, so a
- * third-party engine (Sherpa, RHVoice, eSpeak, ...) is honoured instead of being overridden.
- * Google's engine is only used when the system default fails to initialise, which happens on
- * devices where no default engine is configured.
- */
-@Composable
-private fun rememberSystemTextToSpeechOrNull(): TextToSpeechInstance? {
-    val context = LocalContext.current.applicationContext
-    var textToSpeech by remember { mutableStateOf<TextToSpeechInstance?>(null) }
-
-    LaunchedEffect(Unit) {
-        textToSpeech = TextToSpeechFactory(context, TextToSpeechEngine.SystemDefault).createOrNull()
-            ?: TextToSpeechFactory(context, TextToSpeechEngine.Google).createOrNull()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            textToSpeech?.close()
-            textToSpeech = null
-        }
-    }
-
-    return textToSpeech
 }
 
 @Preview
