@@ -282,6 +282,9 @@ private fun AppContent(
                         SettingsScreen(
                             niaVoiceController = niaVoiceController,
                             initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Agent,
+                            screenTitle = "N I A   /   MEMORY VAULT",
+                            screenSubtitle = "LOCAL RECORDS  •  APPROVALS  •  PRIVACY CONTROLS",
+                            showSectionTabs = false,
                             onNavigateBack = {
                                 chatViewModel.refreshSettings()
                                 navController.navigateUp()
@@ -293,6 +296,9 @@ private fun AppContent(
                         SettingsScreen(
                             niaVoiceController = niaVoiceController,
                             initialTab = com.inspiredandroid.kai.ui.settings.SettingsTab.Services,
+                            screenTitle = "N I A   /   SYSTEMS & VOICE",
+                            screenSubtitle = "LIVE TELEMETRY  •  VOICE ENGINE  •  PROVIDER CONNECTIONS",
+                            showSectionTabs = false,
                             onNavigateBack = {
                                 chatViewModel.refreshSettings()
                                 navController.navigateUp()
