@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
 import com.inspiredandroid.kai.ui.handCursor
@@ -65,6 +66,12 @@ internal fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text(
+            text = "N I A  •  PERSONAL AI",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(12.dp))
         HolographicBrain()
         Spacer(Modifier.height(16.dp))
         Text(
