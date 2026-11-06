@@ -505,6 +505,7 @@ private fun ChatModeScreen(
     var showHistorySheet by remember { mutableStateOf(false) }
     var isSandboxOpen by rememberSaveable { mutableStateOf(initialSandboxOpen) }
     var isVoiceConversationActive by remember { mutableStateOf(false) }
+    var niaVisualState by remember { mutableStateOf(NiaVisualState.IDLE) }
     // Hoisted here so the draft survives toggling the sandbox/terminal view, which
     // removes QuestionInput from composition and would otherwise drop the text.
     var questionInputText by rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -573,6 +574,12 @@ private fun ChatModeScreen(
                     showHistorySheet = true
                 },
                 navigationTabBar = navigationTabBar,
+                brainState = when {
+                    niaVisualState != NiaVisualState.IDLE -> niaVisualState
+                    uiState.isLoading -> NiaVisualState.THINKING
+                    uiState.isSpeaking -> NiaVisualState.SPEAKING
+                    else -> NiaVisualState.IDLE
+                },
             )
 
             HeartbeatBanner(
@@ -966,6 +973,7 @@ private fun ChatModeScreen(
                     hasError = uiState.error != null,
                     textToSpeech = textToSpeech,
                     onVoiceConversationActiveChange = { isVoiceConversationActive = it },
+                onVoiceVisualStateChange = { niaVisualState = it },
                 )
             }
         }
