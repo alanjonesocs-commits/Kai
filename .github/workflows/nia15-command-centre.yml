@@ -1,0 +1,59 @@
+name: NIA15 Command Centre Build
+
+on:
+  push:
+    branches:
+      - feature/nia15-command-centre
+  pull_request:
+    branches:
+      - build/nia15-full-duplex-wakeword
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nia15-command-centre-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    name: Desktop tests and Android FOSS APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out command-centre branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
+
+      - name: Grant Gradle wrapper permission
+        run: chmod +x ./gradlew
+
+      - name: Run common desktop test suite
+        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+
+      - name: Compile Android FOSS debug APK
+        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
+
+      - name: Upload Pixel installation APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nia15-command-centre-foss-debug-apk
+          path: androidApp/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7

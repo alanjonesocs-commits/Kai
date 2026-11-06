@@ -116,9 +116,14 @@ fun SettingsScreen(
     sandboxViewModel: SandboxViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
     navigationTabBar: (@Composable () -> Unit)? = null,
+    initialTab: SettingsTab? = null,
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val sandboxState by sandboxViewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(initialTab) {
+        initialTab?.let(viewModel.actions.onSelectTab)
+    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
