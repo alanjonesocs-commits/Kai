@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.VisualTransformation
@@ -63,6 +64,43 @@ fun ColorScheme.withBlackBackground(): ColorScheme = copy(
 )
 
 val ColorScheme.isOledFlavor: Boolean get() = background == Color.Black
+
+/** Applies NIA's violet/cyan interface palette without overriding the user's light, dark, or OLED choice. */
+fun ColorScheme.withNiaIdentity(): ColorScheme {
+    val isLight = background.luminance() > 0.5f
+    val oled = isOledFlavor
+    val canvas = when {
+        oled -> Color.Black
+        isLight -> Color(0xFFF6F7FC)
+        else -> Color(0xFF080D18)
+    }
+    val mainSurface = when {
+        oled -> Color.Black
+        isLight -> Color(0xFFFFFFFF)
+        else -> Color(0xFF111A2A)
+    }
+    val softSurface = when {
+        oled -> Color.Black
+        isLight -> Color(0xFFEEF0F8)
+        else -> Color(0xFF182338)
+    }
+    return copy(
+        primary = if (isLight) Color(0xFF6655C8) else Color(0xFFB7A5FF),
+        onPrimary = if (isLight) Color.White else Color(0xFF171026),
+        secondary = if (isLight) Color(0xFF00778A) else Color(0xFF68E7F4),
+        onSecondary = if (isLight) Color.White else Color(0xFF00171D),
+        tertiary = if (isLight) Color(0xFFAA4D81) else Color(0xFFFF9CCB),
+        background = canvas,
+        surface = mainSurface,
+        surfaceVariant = softSurface,
+        surfaceContainerLowest = canvas,
+        surfaceContainerLow = softSurface,
+        surfaceContainer = if (oled) Color.Black else if (isLight) Color(0xFFE8EAF4) else Color(0xFF1D2A40),
+        surfaceContainerHigh = if (oled) Color.Black else if (isLight) Color(0xFFE0E3EF) else Color(0xFF24334C),
+        surfaceContainerHighest = if (oled) Color.Black else if (isLight) Color(0xFFD9DDEA) else Color(0xFF2A3A55),
+        outlineVariant = if (isLight) Color(0xFFD2D6E5) else Color(0xFF34445F),
+    )
+}
 
 @Composable
 fun kaiAdaptiveCardColors(): CardColors = CardDefaults.cardColors(

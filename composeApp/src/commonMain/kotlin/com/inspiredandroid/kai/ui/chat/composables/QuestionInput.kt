@@ -275,13 +275,13 @@ fun QuestionInput(
             onValueChange = onTextStateChange,
             modifier = Modifier
                 .focusRequester(focusRequester)
-                .padding(16.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
                 .heightIn(max = maxComposerHeight)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .border(
-                    BorderStroke(width = 2.dp, brush = gradientBrush),
+                    BorderStroke(width = 1.5.dp, brush = gradientBrush),
                     shape = RoundedCornerShape(28.dp),
                 )
                 .onPreviewKeyEvent { event ->

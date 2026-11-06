@@ -49,6 +49,7 @@ import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.rememberSandboxAwareUriHandler
 import com.inspiredandroid.kai.ui.settings.SettingsScreen
 import com.inspiredandroid.kai.ui.withBlackBackground
+import com.inspiredandroid.kai.ui.withNiaIdentity
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.tab_chat
 import kai.composeapp.generated.resources.tab_settings
@@ -162,7 +163,7 @@ private fun AppContent(
         LocalDensity provides scaledDensity,
         LocalUriHandler provides sandboxAwareUriHandler,
     ) {
-        Theme(colorScheme = effectiveColorScheme) {
+        Theme(colorScheme = effectiveColorScheme.withNiaIdentity()) {
             FullScreenImageHost {
                 val chatViewModel: ChatViewModel = koinViewModel()
                 val showTabBar = currentPlatform !is Platform.Mobile
