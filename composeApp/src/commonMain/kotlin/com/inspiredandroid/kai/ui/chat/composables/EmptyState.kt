@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
 import com.inspiredandroid.kai.ui.handCursor
@@ -65,8 +66,15 @@ internal fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HolographicBrain()
-        Spacer(Modifier.height(16.dp))
+        HolographicBrain(size = 188.dp)
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = "NIA",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 4.sp,
+        )
+        Spacer(Modifier.height(4.dp))
         Text(
             text = stringResource(Res.string.welcome_message),
             modifier = Modifier.padding(horizontal = 16.dp),

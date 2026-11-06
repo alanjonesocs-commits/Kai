@@ -60,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.inspiredandroid.kai.Platform
+import com.inspiredandroid.kai.ui.components.NiaVisualState
 import com.inspiredandroid.kai.currentPlatform
 import com.inspiredandroid.kai.data.ServiceEntry
 import com.inspiredandroid.kai.data.imageExtensions
@@ -114,6 +115,7 @@ fun QuestionInput(
     hasError: Boolean = false,
     textToSpeech: TextToSpeechInstance? = null,
     onVoiceConversationActiveChange: (Boolean) -> Unit = {},
+    onVoiceVisualStateChange: (NiaVisualState) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var voiceConversationActive by remember { mutableStateOf(false) }
@@ -122,6 +124,16 @@ fun QuestionInput(
     var lastVoiceReplyId by remember { mutableStateOf(assistantReplyId) }
     var wasVoiceConversationActive by remember { mutableStateOf(false) }
     val voiceScope = rememberCoroutineScope()
+
+    LaunchedEffect(voiceConversationActive, awaitingVoiceReply, speakingVoiceReply, isLoading) {
+        val phase = when {
+            !voiceConversationActive -> NiaVisualState.IDLE
+            speakingVoiceReply -> NiaVisualState.SPEAKING
+            awaitingVoiceReply || isLoading -> NiaVisualState.THINKING
+            else -> NiaVisualState.LISTENING
+        }
+        onVoiceVisualStateChange(phase)
+    }
 
     LaunchedEffect(voiceConversationActive) {
         if (voiceConversationActive != wasVoiceConversationActive) {
@@ -263,13 +275,13 @@ fun QuestionInput(
             onValueChange = onTextStateChange,
             modifier = Modifier
                 .focusRequester(focusRequester)
-                .padding(16.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
                 .heightIn(max = maxComposerHeight)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .border(
-                    BorderStroke(width = 2.dp, brush = gradientBrush),
+                    BorderStroke(width = 1.5.dp, brush = gradientBrush),
                     shape = RoundedCornerShape(28.dp),
                 )
                 .onPreviewKeyEvent { event ->

@@ -67,8 +67,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.inspiredandroid.kai.BackIcon
 import com.inspiredandroid.kai.Version
@@ -76,6 +78,7 @@ import com.inspiredandroid.kai.data.EmailAccount
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.linux.LinuxDistro
 import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
+import com.inspiredandroid.kai.ui.components.HolographicBrain
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors
@@ -225,16 +228,18 @@ fun SettingsScreenContent(
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).navigationBarsPadding().statusBarsPadding().imePadding()) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = CenterHorizontally) {
+            TopBar(
+                onNavigateBack = onNavigateBack,
+                showBack = navigationTabBar == null,
+            )
             if (navigationTabBar != null) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 64.dp),
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = CenterVertically,
                 ) {
                     navigationTabBar()
                 }
-            } else {
-                TopBar(onNavigateBack = onNavigateBack)
             }
 
             val visibleTabs = remember(sandboxState.showSandbox) {
@@ -346,19 +351,46 @@ fun SettingsScreenContent(
 }
 
 @Composable
-private fun TopBar(onNavigateBack: () -> Unit) {
-    Row {
-        IconButton(
-            modifier = Modifier.handCursor(),
-            onClick = onNavigateBack,
-        ) {
-            Icon(
-                imageVector = BackIcon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
+private fun TopBar(
+    onNavigateBack: () -> Unit,
+    showBack: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (showBack) {
+            IconButton(
+                modifier = Modifier.handCursor(),
+                onClick = onNavigateBack,
+            ) {
+                Icon(
+                    imageVector = BackIcon,
+                    contentDescription = "Back to chat",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
+        HolographicBrain(
+            modifier = Modifier.size(38.dp),
+            size = 38.dp,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "NIA",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "SETTINGS",
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 1.4.sp,
+                color = MaterialTheme.colorScheme.secondary,
             )
         }
-        Spacer(Modifier.weight(1f))
     }
 }
 
