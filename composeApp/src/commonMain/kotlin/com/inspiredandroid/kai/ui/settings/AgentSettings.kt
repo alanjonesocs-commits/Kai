@@ -136,6 +136,9 @@ internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
                     onRefresh = actions.onRefreshHeartbeat,
                 )
             }
+            SettingsCard {
+                DiagnosticsSection()
+            }
             if (uiState.showEmailToggle) {
                 SettingsCard {
                     EmailSection(

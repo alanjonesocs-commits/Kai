@@ -1,4 +1,3 @@
-
 name: Lint Checks
 
 on:
@@ -6,19 +5,21 @@ on:
     branches:
       - main
       - test/lint-workflow
+      - build/nia15-full-duplex-wakeword
   pull_request:
     branches:
       - main
+      - frankenstai/three-hour-engineering
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   lint:
-    name: Check Kotlin Formatting
+    name: Format, test and build NIA15
     runs-on: ubuntu-latest
-
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,9 +30,47 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set Gradle permissions
-        run: chmod +x gradlew
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
-      - name: Check formatting
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
+
+      - name: Set Gradle permissions
+        run: chmod +x ./gradlew
+
+      - name: Apply Kotlin formatting
+        run: ./gradlew spotlessApply --no-daemon --stacktrace
+
+      - name: Verify Kotlin formatting
         run: ./gradlew spotlessCheck --no-daemon --stacktrace
-        
+
+      - name: Run common desktop test suite
+        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+
+      - name: Compile Android FOSS debug APK
+        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
+
+      - name: Commit formatter-only changes
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes were needed."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -u
+            git commit -m "Apply Spotless Kotlin formatting"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Upload Pixel installation APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nia15-foss-debug-apk
+          path: androidApp/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
