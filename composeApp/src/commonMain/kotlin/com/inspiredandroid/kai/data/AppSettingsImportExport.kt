@@ -483,8 +483,7 @@ private fun sanitizeMemories(element: JsonElement): String {
     return SharedJson.encodeToString(memories)
 }
 
-private fun parseMemoryAssessment(value: String?, fallback: MemoryAssessment): MemoryAssessment =
-    value?.let { raw -> MemoryAssessment.entries.firstOrNull { it.name == raw } } ?: fallback
+private fun parseMemoryAssessment(value: String?, fallback: MemoryAssessment): MemoryAssessment = value?.let { raw -> MemoryAssessment.entries.firstOrNull { it.name == raw } } ?: fallback
 
 private fun sanitizeConversations(element: JsonElement): List<Conversation> {
     val array = try {

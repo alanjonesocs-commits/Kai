@@ -146,9 +146,7 @@ class MemoryStoreTest {
     @Test
     fun `persistence failure is surfaced and does not report a successful write`() = runTest {
         val settings = object : Settings by MapSettings() {
-            override fun putString(key: String, value: String) {
-                throw IllegalStateException("storage unavailable")
-            }
+            override fun putString(key: String, value: String): Unit = throw IllegalStateException("storage unavailable")
         }
         val store = MemoryStore(AppSettings(settings))
 

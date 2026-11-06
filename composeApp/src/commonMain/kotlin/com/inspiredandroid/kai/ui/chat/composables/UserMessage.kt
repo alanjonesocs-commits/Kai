@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.inspiredandroid.kai.data.Attachment
 import com.inspiredandroid.kai.decodeToImageBitmap
 import com.inspiredandroid.kai.ui.components.LocalShowFullScreenImage
@@ -50,11 +51,17 @@ internal fun UserMessage(
             Spacer(Modifier.weight(1f))
             Column(
                 modifier = Modifier
+                    .widthIn(max = 420.dp)
                     .background(
-                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
-                        RoundedCornerShape(8.dp),
+                        Color(0xFF7767E8).copy(alpha = 0.20f),
+                        RoundedCornerShape(
+                            topStart = 22.dp,
+                            topEnd = 22.dp,
+                            bottomEnd = 6.dp,
+                            bottomStart = 22.dp,
+                        ),
                     )
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
                 horizontalAlignment = Alignment.End,
             ) {
                 val images = attachments.filter { it.mimeType.startsWith("image/") }

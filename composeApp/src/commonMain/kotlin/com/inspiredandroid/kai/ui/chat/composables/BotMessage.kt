@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.inspiredandroid.kai.getBackgroundDispatcher
 import com.inspiredandroid.kai.ui.dynamicui.FrozenSubmission
 import com.inspiredandroid.kai.ui.dynamicui.toSpeakableText
@@ -110,15 +114,36 @@ internal fun BotMessage(
                 // When reasoning is shown above, the Thinking row already provides
                 // the visual gap to the answer — drop the duplicated top inset.
                 val answerTopPadding = if (nonBlankSegments.isNotEmpty()) 6.dp else 16.dp
-                SelectionContainer {
-                    MarkdownContent(
-                        document = document,
-                        isInteractive = effectiveInteractive,
-                        onUiCallback = kaiUiCallback,
-                        frozen = effectiveFrozen,
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(start = 16.dp, top = answerTopPadding, end = 16.dp, bottom = 8.dp),
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(
+                        text = "NIA",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF73DDF5),
+                        letterSpacing = 1.4.sp,
                     )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f),
+                        shape = RoundedCornerShape(
+                            topStart = 6.dp,
+                            topEnd = 20.dp,
+                            bottomEnd = 20.dp,
+                            bottomStart = 20.dp,
+                        ),
+                    ) {
+                        SelectionContainer {
+                            MarkdownContent(
+                                document = document,
+                                isInteractive = effectiveInteractive,
+                                onUiCallback = kaiUiCallback,
+                                frozen = effectiveFrozen,
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            )
+                        }
+                    }
                 }
             }
         }

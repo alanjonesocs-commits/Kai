@@ -162,6 +162,11 @@ kotlin {
                 implementation(libs.litert.lm)
                 implementation(libs.sqldelight.android.driver)
                 implementation(libs.xz)
+                // The Android AAR already contains the Sherpa JVM API classes.
+                // Exclude JitPack's duplicate JVM JAR while retaining the AAR and its native .so files.
+                implementation("com.github.k2-fsa:sherpa-onnx:${libs.versions.sherpaOnnx.get()}") {
+                    exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
+                }
             }
         }
         getByName("desktopMain") {
