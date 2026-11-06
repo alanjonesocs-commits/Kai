@@ -18,9 +18,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import kotlin.math.abs
+
 /** Visual phase used only by NIA's presentation layer. */
 enum class NiaVisualState { IDLE, LISTENING, THINKING, SPEAKING }
-import kotlin.math.abs
 
 @Composable
 fun HolographicBrain(
