@@ -361,11 +361,6 @@ fun QuestionInput(
                             onError = { },
                         )
                     }
-                    VoiceInputButton { recognized ->
-                        val text = textState.text
-                        val updated = text + (if (text.isBlank()) "" else " ") + recognized
-                        onTextStateChange(TextFieldValue(updated, selection = TextRange(updated.length)))
-                    }
                     if (availableServices.size > 1) {
                         ServiceSelector(
                             services = availableServices,
