@@ -1,13 +1,12 @@
 package com.inspiredandroid.kai.data
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.inspiredandroid.kai.createSecureSettings
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.util.UUID
 
 /**
@@ -38,7 +37,7 @@ class AndroidEncryptedMemoryPersistenceTest {
             assertEquals(saved.key, restored!!.key)
             assertEquals(saved.content, restored.content)
             assertEquals(saved.provenance, restored.provenance)
-            assertTrue("Diagnostic entry should be present exactly once", reopenedStore.getAllMemories().count { it.id == saved.id } == 1)
+            assertEquals(1, reopenedStore.getAllMemories().count { it.id == saved.id })
         } finally {
             // Remove only this uniquely named diagnostic record. Never clear the user's
             // encrypted preferences file or any other memory.
