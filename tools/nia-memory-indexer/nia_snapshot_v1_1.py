@@ -488,16 +488,9 @@ def _active_decision(doc: dict[str, Any], active: dict[str, str] | None) -> str 
         raise SnapshotError("IDENTITY_CONFLICT")
     if active["records_hash"] == doc["records_hash"]:
         return "DUPLICATE_CONTENT"
-    old_auth = active.get("generation_authority", "")
-    new_auth = doc["generation_authority"] or ""
-    old_gen = active.get("source_generation", "")
-    new_gen = doc["source_generation"]
-    if old_auth and new_auth and old_auth == new_auth and old_gen and new_gen is not None:
-        if int(new_gen) <= int(old_gen):
-            raise SnapshotError("SOURCE_GENERATION_NOT_NEWER")
-    # These authority and generation values are inside an unsigned snapshot.
-    # Matching self-asserted metadata cannot authenticate the producer or bypass
-    # Alan's approval. A signed or independently trusted channel is a separate gate.
+    # Generation authority/counter fields are unsigned snapshot metadata. Keep
+    # them for operator review, but never auto-activate or discard changed content
+    # based on claims that cannot authenticate the producer.
     return "NEEDS_VERIFICATION"
 
 
