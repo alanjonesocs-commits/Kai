@@ -596,6 +596,13 @@ def recover_index(root: Path) -> dict[str, Any]:
     return {"decision": "RECOVERED", "current": current}
 
 
+def status_index(root: Path) -> dict[str, Any]:
+    current, metadata = _read_current(root)
+    if current is None:
+        return {"decision": "EMPTY", "current": None, "metadata": None}
+    return {"decision": "READY", "current": current, "metadata": metadata}
+
+
 def search_index(root: Path, query: str, limit: int = 20) -> list[dict[str, Any]]:
     if not query.strip():
         return []
@@ -673,6 +680,8 @@ def main(argv: list[str] | None = None) -> int:
     approve.add_argument("--envelope-hash", required=True)
     recover = sub.add_parser("recover")
     recover.add_argument("--root", type=Path, required=True)
+    status = sub.add_parser("status")
+    status.add_argument("--root", type=Path, required=True)
     search = sub.add_parser("search")
     search.add_argument("--root", type=Path, required=True)
     search.add_argument("--limit", type=int, default=20)
@@ -691,6 +700,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"pending_hash": args.envelope_hash}, ensure_ascii=True))
             confirmation = input(f"Type ACTIVATE {args.envelope_hash} to approve this exact snapshot: ")
             result = approve_pending(args.root, args.envelope_hash, confirmation)
+        elif args.command == "status":
+            result = status_index(args.root)
         elif args.command == "search":
             result = search_index(args.root, args.query, args.limit)
         elif args.command == "rollback":
