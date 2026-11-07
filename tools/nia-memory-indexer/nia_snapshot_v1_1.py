@@ -525,6 +525,52 @@ def index_snapshot(path: Path, root: Path) -> dict[str, Any]:
             os.close(fd)
 
 
+def pending_preview(root: Path, envelope_hash: str) -> dict[str, Any]:
+    """Return non-content metadata for an exact pending snapshot before approval."""
+    if not HEX_RE.fullmatch(envelope_hash):
+        raise SnapshotError("ENVELOPE_HASH_INVALID")
+    pending_dir = root / "pending"
+    if pending_dir.is_symlink() or not pending_dir.is_dir():
+        raise SnapshotError("PENDING_NOT_FOUND")
+    path = pending_dir / envelope_hash
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    try:
+        fd = os.open(path, flags)
+    except FileNotFoundError as exc:
+        raise SnapshotError("PENDING_NOT_FOUND") from exc
+    except OSError as exc:
+        raise SnapshotError("PENDING_OPEN_FAILED") from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size <= 0 or info.st_size > MAX_BYTES:
+            raise SnapshotError("PENDING_FILE_INVALID")
+        chunks, total = [], 0
+        while total <= MAX_BYTES:
+            chunk = os.read(fd, min(65536, MAX_BYTES + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        raw = b"".join(chunks)
+    finally:
+        os.close(fd)
+    doc = parse_snapshot_bytes(raw)
+    if doc["envelope_hash"] != envelope_hash:
+        raise SnapshotError("PENDING_HASH_MISMATCH")
+    # Deliberately omit record content and keys from the operator preview.
+    return {
+        "snapshot_id": doc["snapshot_id"],
+        "created_at_epoch_ms": doc["created_at_epoch_ms"],
+        "source": doc["source"],
+        "source_generation": doc["source_generation"],
+        "generation_authority": doc["generation_authority"],
+        "record_count": doc["record_count"],
+        "records_hash": doc["records_hash"],
+        "envelope_hash": doc["envelope_hash"],
+        "hash_scope": doc["hash_scope"],
+    }
+
+
 def approve_pending(root: Path, envelope_hash: str, confirmation: str) -> dict[str, Any]:
     if not HEX_RE.fullmatch(envelope_hash) or confirmation != f"ACTIVATE {envelope_hash}":
         raise SnapshotError("APPROVAL_NOT_CONFIRMED")
@@ -697,7 +743,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "index":
             result = index_snapshot(args.snapshot, args.root)
         elif args.command == "approve-activation":
-            print(json.dumps({"pending_hash": args.envelope_hash}, ensure_ascii=True))
+            preview = pending_preview(args.root, args.envelope_hash)
+            print(json.dumps({"pending_snapshot": preview}, ensure_ascii=True, indent=2))
             confirmation = input(f"Type ACTIVATE {args.envelope_hash} to approve this exact snapshot: ")
             result = approve_pending(args.root, args.envelope_hash, confirmation)
         elif args.command == "status":
