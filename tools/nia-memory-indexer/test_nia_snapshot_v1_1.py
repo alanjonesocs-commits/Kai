@@ -205,6 +205,28 @@ class GenerationActivationTests(unittest.TestCase):
         self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
         self.assertFalse((self.root / "CURRENT.tmp").exists())
 
+    def test_complete_generation_is_reused_after_crash_before_pointer_creation(self):
+        first = snapshot("reuse-first", [record("r1", "k", "First.")], 1, "NIA15")
+        second = snapshot("reuse-second", [record("r2", "k", "Second.")], 2, "NIA15")
+        nia.index_snapshot(self.put(first, "reuse-first.json"), self.root)
+        final_dir = self.root / "generations" / second["envelope_hash"]
+        real_write_synced = nia._write_synced
+
+        def fail_current_pointer(path, data):
+            if Path(path).name == "CURRENT.tmp":
+                raise OSError("simulated crash after generation rename")
+            return real_write_synced(path, data)
+
+        with patch.object(nia, "_write_synced", side_effect=fail_current_pointer):
+            with self.assertRaisesRegex(OSError, "generation rename"):
+                nia.index_snapshot(self.put(second, "reuse-second.json"), self.root)
+        self.assertTrue((final_dir / "index.sqlite").is_file())
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+
+        retried = nia.index_snapshot(self.put(second, "reuse-second-retry.json"), self.root)
+        self.assertEqual(retried["decision"], "INDEXED")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
+
     def test_post_replace_pre_directory_fsync_keeps_complete_generation(self):
         first = snapshot("first", [record("r1", "k", "one")], 1, "authority")
         nia.index_snapshot(self.put(first, "first.json"), self.root)
