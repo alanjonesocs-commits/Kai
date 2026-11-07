@@ -114,25 +114,6 @@ class CanonicalAndParsingTests(unittest.TestCase):
         with self.assertRaisesRegex(nia.SnapshotError, "RECORDS_HASH_MISMATCH"):
             nia.validate_snapshot(changed)
 
-    def test_embedded_generation_counter_cannot_authorise_unsigned_auto_activation(self):
-        first = snapshot("generation-first", [record("g1", "key", "First.")], 1, "NIA15")
-        nia.index_snapshot(self.put(first, "generation-first.json"), self.root)
-        second = snapshot("generation-second", [record("g2", "key", "Second.")], 2, "NIA15")
-        result = nia.index_snapshot(self.put(second, "generation-second.json"), self.root)
-        self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
-        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
-        approved = self.approve(second)
-        self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
-        self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
-
-    def test_generation_counter_replay_is_rejected_even_when_snapshot_is_unsigned(self):
-        first = snapshot("generation-current", [record("g2", "key", "Current.")], 2, "NIA15")
-        nia.index_snapshot(self.put(first, "generation-current.json"), self.root)
-        older = snapshot("generation-old", [record("g1", "key", "Older.")], 1, "NIA15")
-        with self.assertRaisesRegex(nia.SnapshotError, "SOURCE_GENERATION_NOT_NEWER"):
-            nia.index_snapshot(self.put(older, "generation-old.json"), self.root)
-        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
-
     def test_duplicate_record_keys_allowed_but_duplicate_ids_rejected(self):
         a = record("id-a", "same-key", "Reported Room A")
         b = record("id-b", "same-key", "Reported Room B")
@@ -165,6 +146,25 @@ class GenerationActivationTests(unittest.TestCase):
             doc["envelope_hash"],
             f"ACTIVATE {doc['envelope_hash']}",
         )
+
+    def test_embedded_generation_counter_cannot_authorise_unsigned_auto_activation(self):
+        first = snapshot("generation-first", [record("g1", "key", "First.")], 1, "NIA15")
+        nia.index_snapshot(self.put(first, "generation-first.json"), self.root)
+        second = snapshot("generation-second", [record("g2", "key", "Second.")], 2, "NIA15")
+        result = nia.index_snapshot(self.put(second, "generation-second.json"), self.root)
+        self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        approved = self.approve(second)
+        self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
+
+    def test_generation_counter_replay_is_rejected_even_when_snapshot_is_unsigned(self):
+        first = snapshot("generation-current", [record("g2", "key", "Current.")], 2, "NIA15")
+        nia.index_snapshot(self.put(first, "generation-current.json"), self.root)
+        older = snapshot("generation-old", [record("g1", "key", "Older.")], 1, "NIA15")
+        with self.assertRaisesRegex(nia.SnapshotError, "SOURCE_GENERATION_NOT_NEWER"):
+            nia.index_snapshot(self.put(older, "generation-old.json"), self.root)
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
 
     def test_history_write_failure_does_not_undo_durable_activation(self):
         doc = snapshot("history-failure")
