@@ -495,7 +495,9 @@ def _active_decision(doc: dict[str, Any], active: dict[str, str] | None) -> str 
     if old_auth and new_auth and old_auth == new_auth and old_gen and new_gen is not None:
         if int(new_gen) <= int(old_gen):
             raise SnapshotError("SOURCE_GENERATION_NOT_NEWER")
-        return None
+    # These authority and generation values are inside an unsigned snapshot.
+    # Matching self-asserted metadata cannot authenticate the producer or bypass
+    # Alan's approval. A signed or independently trusted channel is a separate gate.
     return "NEEDS_VERIFICATION"
 
 
