@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - build/nia15-full-duplex-wakeword
+      - nia-heart-brain-skin
   pull_request:
     branches:
       - frankenstai/three-hour-engineering
