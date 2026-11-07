@@ -61,6 +61,7 @@ interface DataRepository {
 
     // Conversation management
     val savedConversations: StateFlow<List<Conversation>>
+    val confirmedConversationSaves: StateFlow<Map<String, Long>>
     fun loadConversations()
     fun loadConversation(id: String)
     suspend fun deleteConversation(id: String)

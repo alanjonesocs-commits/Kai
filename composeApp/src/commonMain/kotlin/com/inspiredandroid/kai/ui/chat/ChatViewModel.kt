@@ -165,7 +165,8 @@ class ChatViewModel(
         dataRepository.savedConversations,
         dataRepository.currentConversationId,
         dataRepository.hasUnreadHeartbeat,
-    ) { state, history, conversations, conversationId, hasUnreadHeartbeat ->
+        dataRepository.confirmedConversationSaves,
+    ) { state, history, conversations, conversationId, hasUnreadHeartbeat, confirmedSaves ->
         val summaries = conversations
             .sortedByDescending { it.updatedAt }
             .map {
@@ -184,6 +185,8 @@ class ChatViewModel(
             supportedFileExtensions = dataRepository.supportedFileExtensions().toImmutableList(),
             savedConversations = summaries.toImmutableList(),
             currentConversationId = conversationId,
+            lastSavedId = conversationId?.takeIf { confirmedSaves.containsKey(it) },
+            lastSavedAt = conversationId?.let { confirmedSaves[it] },
             hasUnreadHeartbeat = hasUnreadHeartbeat,
             installedSkills = dataRepository.getInstalledSkills().toImmutableList(),
         )

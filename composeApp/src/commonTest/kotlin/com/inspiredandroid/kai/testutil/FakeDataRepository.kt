@@ -242,6 +242,7 @@ class FakeDataRepository : DataRepository {
 
     // Conversation management
     override val savedConversations: MutableStateFlow<List<Conversation>> = MutableStateFlow(emptyList())
+    override val confirmedConversationSaves: MutableStateFlow<Map<String, Long>> = MutableStateFlow(emptyMap())
 
     override fun loadConversations() {
         // No-op in tests

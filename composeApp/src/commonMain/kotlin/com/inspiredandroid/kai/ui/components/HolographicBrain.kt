@@ -4,24 +4,128 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
 
 import kotlin.math.abs
 
 /** Visual phase used only by NIA's presentation layer. */
 enum class NiaVisualState { IDLE, LISTENING, THINKING, SPEAKING }
+
+/**
+ * NIA's paired identity: a live neural network linked to a beating heart.
+ * This is presentation-only; the state is supplied by the existing chat/voice UI.
+ */
+@Composable
+fun HeartBrainDuo(
+    modifier: Modifier = Modifier,
+    state: NiaVisualState = NiaVisualState.IDLE,
+    isMini: Boolean = false,
+    brainSize: Dp = if (isMini) 42.dp else 164.dp,
+    heartSize: Dp = if (isMini) 28.dp else 94.dp,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        HolographicBrain(size = brainSize, state = state)
+        Canvas(
+            modifier = Modifier
+                .width(if (isMini) 2.dp else 3.dp)
+                .height(if (isMini) 6.dp else 16.dp),
+        ) {
+            drawLine(
+                color = Color(0xFF68E7F4).copy(alpha = 0.9f),
+                start = Offset(size.width / 2f, 0f),
+                end = Offset(size.width / 2f, size.height),
+                strokeWidth = if (isMini) 2f else 3f,
+            )
+        }
+        BeatingHeart(state = state, size = heartSize)
+    }
+}
+
+@Composable
+private fun BeatingHeart(state: NiaVisualState, size: Dp) {
+    val bpm = when (state) {
+        NiaVisualState.LISTENING -> 82
+        NiaVisualState.THINKING -> 92
+        NiaVisualState.SPEAKING -> 76
+        NiaVisualState.IDLE -> 62
+    }
+    val cycleMillis = 60_000 / bpm
+    val transition = rememberInfiniteTransition()
+    val scale by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = cycleMillis
+                1f at 0
+                1.15f at cycleMillis / 4
+                1f at cycleMillis / 2
+                1.08f at (cycleMillis * 3) / 4
+                1f at cycleMillis
+            },
+            repeatMode = RepeatMode.Restart,
+        ),
+    )
+    Canvas(
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+    ) {
+        val widthPx = this.size.width
+        val heightPx = this.size.height
+        val heart = Path().apply {
+            moveTo(widthPx * 0.5f, heightPx * 0.86f)
+            cubicTo(widthPx * 0.12f, heightPx * 0.59f, widthPx * 0.08f, heightPx * 0.22f, widthPx * 0.31f, heightPx * 0.16f)
+            cubicTo(widthPx * 0.41f, heightPx * 0.12f, widthPx * 0.47f, heightPx * 0.22f, widthPx * 0.5f, heightPx * 0.31f)
+            cubicTo(widthPx * 0.53f, heightPx * 0.22f, widthPx * 0.59f, heightPx * 0.12f, widthPx * 0.69f, heightPx * 0.16f)
+            cubicTo(widthPx * 0.92f, heightPx * 0.22f, widthPx * 0.88f, heightPx * 0.59f, widthPx * 0.5f, heightPx * 0.86f)
+            close()
+        }
+        drawPath(
+            path = heart,
+            color = Color(0xFFEC4899).copy(alpha = 0.22f),
+            style = Stroke(width = widthPx * 0.12f),
+        )
+        drawPath(
+            path = heart,
+            brush = Brush.verticalGradient(
+                colors = listOf(Color(0xFFEC4899), Color(0xFFEF4444)),
+            ),
+        )
+        drawCircle(
+            color = Color.White.copy(alpha = 0.78f),
+            radius = widthPx * 0.025f,
+            center = Offset(widthPx * 0.36f, heightPx * 0.29f),
+        )
+    }
+}
 
 @Composable
 fun HolographicBrain(

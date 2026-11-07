@@ -244,6 +244,7 @@ class RemoteDataRepository(
     override val fallbackStatus: StateFlow<FallbackStatus?> = _fallbackStatus
 
     override val savedConversations: StateFlow<List<Conversation>> = conversationStorage.conversations
+    override val confirmedConversationSaves: StateFlow<Map<String, Long>> = conversationStorage.confirmedSaves
 
     override fun getConfiguredServiceInstances(): List<ServiceInstance> = appSettings.getConfiguredServiceInstances().filter { Service.fromId(it.serviceId) != Service.Free }
 

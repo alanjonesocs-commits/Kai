@@ -34,7 +34,8 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inspiredandroid.kai.ui.components.HolographicBrain
+import com.inspiredandroid.kai.ui.components.HeartBrainDuo
+import com.inspiredandroid.kai.ui.components.NiaVisualState
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
 import com.inspiredandroid.kai.ui.handCursor
 import kai.composeapp.generated.resources.Res
@@ -66,7 +67,7 @@ internal fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HolographicBrain(size = 188.dp)
+        HeartBrainDuo(state = NiaVisualState.IDLE, brainSize = 164.dp, heartSize = 94.dp)
         Spacer(Modifier.height(14.dp))
         Text(
             text = "NIA",

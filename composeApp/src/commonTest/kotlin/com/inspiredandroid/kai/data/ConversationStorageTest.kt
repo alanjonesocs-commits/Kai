@@ -4,6 +4,7 @@ import com.inspiredandroid.kai.TerminalLine
 import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ConversationStorageTest {
@@ -36,7 +37,26 @@ class ConversationStorageTest {
         val conversations = reloaded.conversations.value
         assertEquals(listOf("c1", "c2"), conversations.map { it.id })
         assertEquals(listOf("Hello", "Hi!"), conversations[0].messages.map { it.content })
+        assertEquals(2000L, reloaded.confirmedSaves.value["c1"])
         assertEquals("Title c2", conversations[1].title)
+    }
+
+    @Test
+    fun `failed persistence does not publish a confirmed save`() {
+        val settings = MapSettings()
+        val appSettings = AppSettings(settings)
+        val delegate = SettingsConversationPersistence(appSettings)
+        val failingPersistence = object : ConversationPersistence by delegate {
+            override fun save(conversation: Conversation, snapshot: List<Conversation>) {
+                error("simulated disk write failure")
+            }
+        }
+        val storage = ConversationStorage(appSettings, failingPersistence)
+
+        assertFailsWith<IllegalStateException> {
+            storage.saveConversation(conversation("c1", "Hello"))
+        }
+        assertTrue(storage.confirmedSaves.value.isEmpty())
     }
 
     @Test

@@ -83,6 +83,8 @@ data class ChatUiState(
     val availableServices: ImmutableList<ServiceEntry> = persistentListOf(),
     val savedConversations: ImmutableList<ConversationSummary> = persistentListOf(),
     val currentConversationId: String? = null,
+    val lastSavedId: String? = null,
+    val lastSavedAt: Long? = null,
     val hasUnreadHeartbeat: Boolean = false,
     val smsDrafts: ImmutableList<SmsDraft> = persistentListOf(),
     val snackbarMessage: StringResource? = null,

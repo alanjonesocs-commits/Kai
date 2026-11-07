@@ -18,9 +18,14 @@ class ConversationStorage(
     private val mutableConversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = mutableConversations.asStateFlow()
 
+    // Contains only records read successfully from persistence or written successfully to it.
+    private val mutableConfirmedSaves = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val confirmedSaves: StateFlow<Map<String, Long>> = mutableConfirmedSaves.asStateFlow()
+
     fun loadConversations() {
         val loaded = persistence.loadAll()
         mutableConversations.value = loaded
+        mutableConfirmedSaves.value = loaded.associate { it.id to it.updatedAt }
         if (loaded.isEmpty()) {
             migrateLegacy()
         }
@@ -46,6 +51,7 @@ class ConversationStorage(
             }
         }
         persistence.save(saved, mutableConversations.value)
+        mutableConfirmedSaves.update { it + (saved.id to saved.updatedAt) }
     }
 
     /**
@@ -100,6 +106,7 @@ class ConversationStorage(
             current.filter { it.id != id }
         }
         persistence.delete(id, mutableConversations.value)
+        mutableConfirmedSaves.update { it - id }
     }
 
     private fun migrateLegacy() {
@@ -116,6 +123,7 @@ class ConversationStorage(
         }
         mutableConversations.value = conversations
         persistence.replaceAll(conversations)
+        mutableConfirmedSaves.value = conversations.associate { it.id to it.updatedAt }
         deleteLegacyConversationFile()
     }
 }

@@ -95,7 +95,7 @@ import com.inspiredandroid.kai.ui.chat.composables.TrailingIcon
 import com.inspiredandroid.kai.ui.chat.composables.UserMessage
 import com.inspiredandroid.kai.ui.chat.composables.WaitingResponseRow
 import com.inspiredandroid.kai.ui.chat.composables.uiErrorText
-import com.inspiredandroid.kai.ui.components.HolographicBrain
+import com.inspiredandroid.kai.ui.components.HeartBrainDuo
 import com.inspiredandroid.kai.ui.components.NiaVisualState
 import com.inspiredandroid.kai.ui.components.VerticalScrollbarForList
 import com.inspiredandroid.kai.ui.components.animatedGradientBorder
@@ -254,7 +254,7 @@ private fun InteractiveModeScreen(
                         horizontalAlignment = CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        HolographicBrain()
+                        HeartBrainDuo()
                         Spacer(Modifier.height(16.dp))
                         Text(
                             text = stringResource(Res.string.interactive_welcome_title),
@@ -581,6 +581,9 @@ private fun ChatModeScreen(
                     uiState.isSpeaking -> NiaVisualState.SPEAKING
                     else -> NiaVisualState.IDLE
                 },
+                lastSavedId = uiState.lastSavedId,
+                lastSavedAt = uiState.lastSavedAt,
+                isSavePending = uiState.isLoading,
             )
 
             HeartbeatBanner(
