@@ -1,5 +1,8 @@
 package com.inspiredandroid.kai.nia.retrieval
 
+import com.inspiredandroid.kai.data.AppSettings
+import com.russhwolf.settings.MapSettings
+import com.russhwolf.settings.Settings
 import com.inspiredandroid.kai.data.MemoryAssessment
 import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
@@ -127,56 +130,89 @@ class NiaMemorySnapshotBuilderTest {
     }
 
     @Test
-    fun syntheticFixtureRecordsMatchPythonIndexerSha256() {
-        fun entry(
-            id: String,
-            key: String,
-            content: String,
-            timestamp: Long,
-            category: MemoryCategory,
-            claim: MemoryAssessment,
-            resolution: MemoryAssessment,
-            conversation: String,
-        ) = MemoryEntry(
-            key = key,
-            content = content,
-            createdAt = timestamp,
-            updatedAt = timestamp,
-            category = category,
-            hitCount = 1,
-            source = "synthetic_test",
-            id = id,
-            receiptStatus = MemoryAssessment.CONFIRMED,
-            claimStatus = claim,
-            factStatus = MemoryAssessment.UNKNOWN,
-            resolutionStatus = resolution,
-            sourceConversationId = conversation,
-            provenance = listOf(
-                MemoryProvenance("synthetic_test", conversation, timestamp),
-            ),
-        )
-
-        val records = listOf(
-            entry("mem-syn-001", "notebook.preference", "Fictional test user prefers green notebooks.", 1793529000000, MemoryCategory.PREFERENCE, MemoryAssessment.REPORTED, MemoryAssessment.UNKNOWN, "synthetic-conversation-001"),
-            entry("mem-syn-002", "workspace.preference", "Fictional test user said their preferred workspace is Room A.", 1793610000000, MemoryCategory.GENERAL, MemoryAssessment.REPORTED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-002"),
-            entry("mem-syn-003", "workspace.preference", "Fictional test user later said their preferred workspace is Room B.", 1793696400000, MemoryCategory.GENERAL, MemoryAssessment.REPORTED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-003"),
-            entry("mem-syn-004", "workspace.current_status", "Fictional test user's current preferred workspace has not been established.", 1793700000000, MemoryCategory.GENERAL, MemoryAssessment.UNKNOWN, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-004"),
-            entry("mem-syn-005", "workspace.change_hint", "A fictional note suggests a possible change to the user's workspace preference.", 1793770500000, MemoryCategory.LEARNING, MemoryAssessment.ASSUMED, MemoryAssessment.NEEDS_VERIFICATION, "synthetic-conversation-005"),
-        )
+    fun schema11GoldenFixtureMatchesPythonCanonicalHashes() {
+        val rawRecords = """[{"category":"PREFERENCE","claimStatus":"REPORTED","content":"Fictional test user prefers green notebooks.","createdAt":1793529000000,"factStatus":"UNKNOWN","futureField":{"😀":"emoji key","～":"fullwidth tilde key"},"hitCount":1,"id":"mem-syn-001","key":"notebook.preference","provenance":[{"conversationId":"synthetic-conversation-001","observedAt":1793529000000,"source":"synthetic_test"}],"receiptStatus":"CONFIRMED","resolutionStatus":"NEEDS_VERIFICATION","source":"synthetic_test","sourceConversationId":"synthetic-conversation-001","updatedAt":1793529000000},{"category":"GENERAL","claimStatus":"REPORTED","content":"Fictional test user said Room A.","createdAt":1793610000000,"factStatus":"UNKNOWN","hitCount":1,"id":"mem-syn-002","key":"workspace.preference","provenance":[],"receiptStatus":"CONFIRMED","resolutionStatus":"NEEDS_VERIFICATION","source":null,"sourceConversationId":null,"updatedAt":1793610000000},{"category":"GENERAL","claimStatus":"REPORTED","content":"Fictional test user later said Room B.","createdAt":1793696400000,"factStatus":"UNKNOWN","hitCount":2,"id":"mem-syn-003","key":"workspace.preference","provenance":[{"conversationId":"synthetic-conversation-003","observedAt":1793696400000,"source":"synthetic_test"}],"receiptStatus":"CONFIRMED","resolutionStatus":"NEEDS_VERIFICATION","source":"synthetic_test","sourceConversationId":"synthetic-conversation-003","updatedAt":1793696400000}]"""
 
         val document = json.parseToJsonElement(
-            NiaMemorySnapshotBuilder.build(
-                records = records,
+            NiaMemorySnapshotBuilder.buildFromRawJson(
+                rawMemoryJson = rawRecords,
                 snapshotId = "snap-synthetic-000001",
                 createdAtEpochMs = 1793770800000,
+                sourceApplication = "NIA15",
+                sourcePlatform = "Android",
+                sourceDeviceLabel = "synthetic-fixture",
+                sourceSystem = "NIA15",
             ),
         ).jsonObject
 
+        assertEquals("1.1.0", document["schema_version"]?.jsonPrimitive?.content)
         assertEquals(
-            "8f1737efc3229fefb61e5e658e1216c41c1d261370e5934fcfac823e8646919b",
+            "0fd7b83ee7a898cd608b12447a621dbda4ed3361c6fd8ecab6d929107f7b7fce",
             document["records_hash"]?.jsonPrimitive?.content,
-            "Kotlin snapshot hashing must match the checked-in Python indexer fixture",
         )
+        assertEquals(
+            "1799c1ba33866cab76c46937dcc5dce7e95077089da6758851ba1fc01b0e73e5",
+            document["envelope_hash"]?.jsonPrimitive?.content,
+        )
+    }
+
+    @Test
+    fun rawJsonRejectsDuplicateKeysBeforeJsonObjectConversion() {
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson("""[{"a":1,"a":2}]""")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson("""[{"a":1,"\\u0061":2}]""")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson("""[{"unknown":{"nested":1,"nested":2}}]""")
+        }
+    }
+
+    @Test
+    fun rawJsonRejectsUnsupportedNumbersAndLoneSurrogates() {
+        for (raw in listOf(
+            """[{"unknown":-0}]""",
+            """[{"unknown":1.0}]""",
+            """[{"unknown":1e2}]""",
+            """[{"unknown":"\\ud800"}]""",
+            """[{"unknown":"\\udc00"}]""",
+        )) {
+            assertFailsWith<IllegalArgumentException> {
+                NiaMemorySnapshotBuilder.buildFromRawJson(raw)
+            }
+        }
+    }
+
+    @Test
+    fun rawSettingsSnapshotReadsMemoryOnceAndNeverWrites() {
+        val backing = MapSettings()
+        backing.putString("agent_memories", "[]")
+        val tracking = object : Settings by backing {
+            var memoryReads = 0
+            var memoryWrites = 0
+
+            override fun getStringOrNull(key: String): String? {
+                if (key == "agent_memories") memoryReads++
+                return backing.getStringOrNull(key)
+            }
+
+            override fun putString(key: String, value: String) {
+                if (key == "agent_memories") memoryWrites++
+                backing.putString(key, value)
+            }
+        }
+        val appSettings = AppSettings(tracking)
+
+        NiaMemorySnapshotBuilder.buildFromAppSettings(
+            appSettings = appSettings,
+            snapshotId = "empty-snapshot",
+            createdAtEpochMs = 100,
+        )
+
+        assertEquals(1, tracking.memoryReads)
+        assertEquals(0, tracking.memoryWrites)
+        assertEquals("[]", backing.getStringOrNull("agent_memories"))
     }
 
     @Test
