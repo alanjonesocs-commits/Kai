@@ -17,6 +17,8 @@ import sqlite3
 import stat
 import sys
 import tempfile
+import time
+import uuid
 from urllib.parse import quote
 from pathlib import Path
 from typing import Any
@@ -393,6 +395,42 @@ def _build_sqlite(db_path: Path, doc: dict[str, Any]) -> None:
 
 
 
+def _record_history(
+    root: Path,
+    *,
+    event_type: str,
+    previous_envelope_hash: str | None,
+    envelope_hash: str,
+    snapshot_id: str,
+    records_hash: str,
+    approval_method: str,
+) -> bool:
+    """Write a content-free local audit event after the CURRENT pointer is durable."""
+    try:
+        history_dir = root / "history"
+        _private_dir(history_dir)
+        event = {
+            "event_id": uuid.uuid4().hex,
+            "event_type": event_type,
+            "recorded_at_epoch_ms": time.time_ns() // 1_000_000,
+            "actor_uid": os.getuid() if hasattr(os, "getuid") else None,
+            "previous_envelope_hash": previous_envelope_hash,
+            "envelope_hash": envelope_hash,
+            "snapshot_id": snapshot_id,
+            "records_hash": records_hash,
+            "approval_method": approval_method,
+        }
+        target = history_dir / f"{event['recorded_at_epoch_ms']}-{event['event_id']}.json"
+        _write_synced(target, canonical_json(event))
+        _fsync_dir(history_dir)
+        _fsync_dir(root)
+        return True
+    except Exception:
+        # Activation is already committed. Report a history failure separately;
+        # never imply CURRENT was rolled back or that the snapshot was rejected.
+        return False
+
+
 def _verify_existing_generation(generation_dir: Path, doc: dict[str, Any]) -> None:
     """Reuse only a complete immutable generation for this exact snapshot."""
     db_path = generation_dir / "index.sqlite"
@@ -461,7 +499,13 @@ def _active_decision(doc: dict[str, Any], active: dict[str, str] | None) -> str 
     return "NEEDS_VERIFICATION"
 
 
-def _activate(root: Path, doc: dict[str, Any], previous: str | None) -> None:
+def _activate(
+    root: Path,
+    doc: dict[str, Any],
+    previous: str | None,
+    *,
+    activation_method: str,
+) -> bool:
     generations = root / "generations"
     _private_dir(generations)
     staging = root / "staging"
@@ -489,6 +533,15 @@ def _activate(root: Path, doc: dict[str, Any], previous: str | None) -> None:
     _write_synced(pointer_tmp, (doc["envelope_hash"] + "\\n").encode("ascii"))
     os.replace(pointer_tmp, root / "CURRENT")
     _fsync_dir(root)
+    return _record_history(
+        root,
+        event_type="ACTIVATED",
+        previous_envelope_hash=previous,
+        envelope_hash=doc["envelope_hash"],
+        snapshot_id=doc["snapshot_id"],
+        records_hash=doc["records_hash"],
+        approval_method=activation_method,
+    )
 
 
 def index_snapshot(path: Path, root: Path) -> dict[str, Any]:
@@ -516,8 +569,18 @@ def index_snapshot(path: Path, root: Path) -> dict[str, Any]:
                 os.replace(temp, target)
                 _fsync_dir(pending)
             return {"decision": "NEEDS_VERIFICATION", "envelope_hash": doc["envelope_hash"]}
-        _activate(root, doc, previous)
-        return {"decision": "INDEXED", "envelope_hash": doc["envelope_hash"], "previous": previous}
+        history_written = _activate(
+            root,
+            doc,
+            previous,
+            activation_method="FIRST_VALID_SNAPSHOT" if previous is None else "TRUSTED_SOURCE_GENERATION",
+        )
+        return {
+            "decision": "INDEXED",
+            "envelope_hash": doc["envelope_hash"],
+            "previous": previous,
+            "history_status": "RECORDED" if history_written else "WRITE_FAILED",
+        }
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
