@@ -205,6 +205,85 @@ class GenerationActivationTests(unittest.TestCase):
         self.assertEqual((self.root / "CURRENT").read_text().strip(), changed["envelope_hash"])
         self.assertEqual(nia.recover_index(self.root)["current"], changed["envelope_hash"])
 
+    def test_hit_count_matches_kotlin_int_range(self):
+        valid = record()
+        valid["hitCount"] = 2**31 - 1
+        nia.validate_snapshot(snapshot(records=[valid]))
+        too_large = dict(valid, hitCount=2**31)
+        with self.assertRaisesRegex(nia.SnapshotError, "RECORD_HIT_COUNT_INVALID"):
+            nia.validate_snapshot(snapshot(records=[too_large]))
+
+    def test_wrong_category_or_status_type_is_rejected_cleanly(self):
+        invalid_category = dict(record(), category={"not": "a string"})
+        invalid_status = dict(record(), claimStatus=["REPORTED"])
+        for invalid in (invalid_category, invalid_status):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(nia.SnapshotError):
+                    nia.validate_snapshot(snapshot(records=[invalid]))
+
+    def test_search_returns_distinct_conflicting_records(self):
+        records = [
+            record("room-a", "workspace.preference", "Fictional preference is Room A."),
+            record("room-b", "workspace.preference", "Fictional preference later reported as Room B."),
+        ]
+        doc = snapshot("search-conflicts", records, 1, "NIA15")
+        result = nia.index_snapshot(self.put(doc, "search.json"), self.root)
+        self.assertEqual(result["decision"], "INDEXED")
+        hits = nia.search_index(self.root, "Room")
+        self.assertEqual({hit["record_id"] for hit in hits}, {"room-a", "room-b"})
+        self.assertEqual({hit["raw_record"]["key"] for hit in hits}, {"workspace.preference"})
+
+    def test_explicit_rollback_switches_to_verified_retained_generation(self):
+        first = snapshot("rollback-first", [record("first", "desk", "A fictional wooden desk.")], 1, "NIA15")
+        second = snapshot("rollback-second", [record("second", "chair", "A fictional blue chair.")], 2, "NIA15")
+        first_result = nia.index_snapshot(self.put(first, "rollback-first.json"), self.root)
+        second_result = nia.index_snapshot(self.put(second, "rollback-second.json"), self.root)
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
+        rollback = nia.rollback_generation(self.root, first["envelope_hash"])
+        self.assertEqual(rollback["decision"], "ROLLED_BACK")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        self.assertTrue((self.root / "generations" / second["envelope_hash"] / "index.sqlite").is_file())
+
+    def test_crash_after_empty_current_tmp_creation_recovers_old_pointer(self):
+        first = snapshot("crash-empty-first", [record("first", "key", "First.")], 1, "NIA15")
+        second = snapshot("crash-empty-second", [record("second", "key", "Second.")], 2, "NIA15")
+        nia.index_snapshot(self.put(first, "empty-first.json"), self.root)
+        real_write = os.write
+
+        def fail_before_pointer_bytes(fd, data):
+            target = os.readlink(f"/proc/self/fd/{fd}")
+            if target.endswith("/CURRENT.tmp"):
+                raise OSError("simulated crash after empty CURRENT.tmp creation")
+            return real_write(fd, data)
+
+        with patch.object(nia.os, "write", side_effect=fail_before_pointer_bytes):
+            with self.assertRaises(OSError):
+                nia.index_snapshot(self.put(second, "empty-second.json"), self.root)
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        self.assertEqual((self.root / "CURRENT.tmp").stat().st_size, 0)
+        self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
+        self.assertFalse((self.root / "CURRENT.tmp").exists())
+
+    def test_crash_after_full_current_tmp_write_before_fsync_recovers_old_pointer(self):
+        first = snapshot("crash-full-first", [record("first", "key", "First.")], 1, "NIA15")
+        second = snapshot("crash-full-second", [record("second", "key", "Second.")], 2, "NIA15")
+        nia.index_snapshot(self.put(first, "full-first.json"), self.root)
+        real_fsync = os.fsync
+
+        def fail_before_pointer_fsync(fd):
+            target = os.readlink(f"/proc/self/fd/{fd}")
+            if target.endswith("/CURRENT.tmp"):
+                raise OSError("simulated crash after full pointer write before fsync")
+            return real_fsync(fd)
+
+        with patch.object(nia.os, "fsync", side_effect=fail_before_pointer_fsync):
+            with self.assertRaises(OSError):
+                nia.index_snapshot(self.put(second, "full-second.json"), self.root)
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        self.assertEqual((self.root / "CURRENT.tmp").read_text().strip(), second["envelope_hash"])
+        self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
+        self.assertFalse((self.root / "CURRENT.tmp").exists())
+
     def test_symlink_snapshot_is_rejected(self):
         target = self.put(snapshot(), "real.json")
         link = Path(self.temp.name) / "linked.json"
