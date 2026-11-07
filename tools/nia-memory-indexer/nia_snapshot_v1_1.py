@@ -538,7 +538,7 @@ def recover_index(root: Path) -> dict[str, Any]:
             if item.is_symlink() or item.is_file():
                 item.unlink()
         _fsync_dir(pending)
-    for name in ("CURRENT.tmp",):
+    for name in ("CURRENT.tmp", "CURRENT.rollback.tmp"):
         pointer_tmp = root / name
         if pointer_tmp.exists() or pointer_tmp.is_symlink():
             pointer_tmp.unlink()
