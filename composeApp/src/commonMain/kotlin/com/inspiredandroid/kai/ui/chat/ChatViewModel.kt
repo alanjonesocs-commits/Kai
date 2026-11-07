@@ -159,14 +159,13 @@ class ChatViewModel(
         }
     }
 
-    val state = combine(
+    val baseState = combine(
         _state,
         dataRepository.chatHistory,
         dataRepository.savedConversations,
         dataRepository.currentConversationId,
         dataRepository.hasUnreadHeartbeat,
-        dataRepository.confirmedConversationSaves,
-    ) { state, history, conversations, conversationId, hasUnreadHeartbeat, confirmedSaves ->
+    ) { state, history, conversations, conversationId, hasUnreadHeartbeat ->
         val summaries = conversations
             .sortedByDescending { it.updatedAt }
             .map {
@@ -185,10 +184,19 @@ class ChatViewModel(
             supportedFileExtensions = dataRepository.supportedFileExtensions().toImmutableList(),
             savedConversations = summaries.toImmutableList(),
             currentConversationId = conversationId,
-            lastSavedId = conversationId?.takeIf { confirmedSaves.containsKey(it) },
-            lastSavedAt = conversationId?.let { confirmedSaves[it] },
             hasUnreadHeartbeat = hasUnreadHeartbeat,
             installedSkills = dataRepository.getInstalledSkills().toImmutableList(),
+        )
+    }.distinctUntilChanged()
+
+    val state = combine(
+        baseState,
+        dataRepository.confirmedConversationSaves,
+    ) { state, confirmedSaves ->
+        val conversationId = state.currentConversationId
+        state.copy(
+            lastSavedId = conversationId?.takeIf { confirmedSaves.containsKey(it) },
+            lastSavedAt = conversationId?.let { confirmedSaves[it] },
         )
     }.distinctUntilChanged().stateIn(
         scope = viewModelScope,
