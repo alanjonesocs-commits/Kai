@@ -48,6 +48,8 @@ Pending bytes are re-read and revalidated before activation. Approval does not o
 
 The v1.1 `CURRENT` file contains a plain envelope hash and its SQLite file is `generations/<envelope_hash>/index.sqlite`. The explicit rollback command validates the retained database before switching this pointer. Previous generations are retained; no automatic pruning is enabled.
 
+Every successful activation and explicit rollback attempts to append a **content-free local history event** under `history/` after the `CURRENT` pointer has been fsynced. Events include timestamp, OS user ID where available, snapshot ID, previous/current envelope hashes, records hash, event type, and activation method; they do not include memory content or record keys. History files and directories use private permissions. This is an audit trail for the normal workflow, not a cryptographic signature or tamper-proof log: a malicious process running as the same OS user can still change it. If history writing fails after the pointer switch, the command reports `history_status=WRITE_FAILED`; it does not misreport that activation was rolled back. A process crash in the small interval after pointer fsync and before the history file is durable can leave an activation without its corresponding history event; recovery must report this rather than silently inventing an earlier timestamp or actor.
+
 ## Legacy schema 1.0.0 — compatibility prototype
 
 The following older files remain for the original v1.0.0 prototype:
