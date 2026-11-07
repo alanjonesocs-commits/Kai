@@ -135,6 +135,15 @@ class GenerationActivationTests(unittest.TestCase):
         path.write_bytes(nia.canonical_json(doc))
         return path
 
+    def test_history_write_failure_does_not_undo_durable_activation(self):
+        doc = snapshot("history-failure")
+        path = self.put(doc, "history-failure.json")
+        with patch.object(nia, "_record_history", return_value=False):
+            result = nia.index_snapshot(path, self.root)
+        self.assertEqual(result["decision"], "INDEXED")
+        self.assertEqual(result["history_status"], "WRITE_FAILED")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), doc["envelope_hash"])
+
     def test_status_reports_empty_then_active_generation(self):
         self.assertEqual(nia.status_index(self.root)["decision"], "EMPTY")
         doc = snapshot()
@@ -148,7 +157,15 @@ class GenerationActivationTests(unittest.TestCase):
         path = self.put(snapshot(), "first.json")
         result = nia.index_snapshot(path, self.root)
         self.assertEqual(result["decision"], "INDEXED")
+        self.assertEqual(result["history_status"], "RECORDED")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), result["envelope_hash"])
+        events = [json.loads(p.read_text(encoding="utf-8")) for p in (self.root / "history").glob("*.json")]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "ACTIVATED")
+        self.assertEqual(events[0]["approval_method"], "FIRST_VALID_SNAPSHOT")
+        self.assertEqual(events[0]["envelope_hash"], result["envelope_hash"])
+        self.assertNotIn("content", events[0])
+        self.assertNotIn("records", events[0])
         self.assertEqual(os.stat(self.root).st_mode & 0o777, 0o700)
         self.assertEqual(os.stat(self.root / "index.lock").st_mode & 0o777, 0o600)
         generation = self.root / "generations" / result["envelope_hash"]
@@ -176,11 +193,24 @@ class GenerationActivationTests(unittest.TestCase):
         pending_path = self.put(changed, "changed.json")
         result = nia.index_snapshot(pending_path, self.root)
         self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
+        preview = nia.pending_preview(self.root, changed["envelope_hash"])
+        self.assertEqual(preview["snapshot_id"], changed["snapshot_id"])
+        self.assertEqual(preview["records_hash"], changed["records_hash"])
+        self.assertEqual(preview["envelope_hash"], changed["envelope_hash"])
+        self.assertNotIn("records", preview)
+        self.assertNotIn("content", preview)
         with self.assertRaisesRegex(nia.SnapshotError, "APPROVAL_NOT_CONFIRMED"):
             nia.approve_pending(self.root, changed["envelope_hash"], "yes")
         approved = nia.approve_pending(self.root, changed["envelope_hash"], f"ACTIVATE {changed['envelope_hash']}")
         self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
+        self.assertEqual(approved["history_status"], "RECORDED")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), changed["envelope_hash"])
+        events = [json.loads(p.read_text(encoding="utf-8")) for p in (self.root / "history").glob("*.json")]
+        approved_event = next(event for event in events if event["envelope_hash"] == changed["envelope_hash"])
+        self.assertEqual(approved_event["event_type"], "ACTIVATED")
+        self.assertEqual(approved_event["approval_method"], "ALAN_INTERACTIVE_APPROVAL")
+        self.assertNotIn("records", approved_event)
+        self.assertNotIn("content", approved_event)
         with self.assertRaises(FileNotFoundError):
             nia.approve_pending(self.root, changed["envelope_hash"], f"ACTIVATE {changed['envelope_hash']}")
 
@@ -290,7 +320,13 @@ class GenerationActivationTests(unittest.TestCase):
         self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
         rollback = nia.rollback_generation(self.root, first["envelope_hash"])
         self.assertEqual(rollback["decision"], "ROLLED_BACK")
+        self.assertEqual(rollback["history_status"], "RECORDED")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        events = [json.loads(p.read_text(encoding="utf-8")) for p in (self.root / "history").glob("*.json")]
+        rollback_event = next(event for event in events if event["event_type"] == "ROLLED_BACK")
+        self.assertEqual(rollback_event["envelope_hash"], first["envelope_hash"])
+        self.assertEqual(rollback_event["previous_envelope_hash"], second["envelope_hash"])
+        self.assertEqual(rollback_event["approval_method"], "EXPLICIT_ROLLBACK")
         self.assertTrue((self.root / "generations" / second["envelope_hash"] / "index.sqlite").is_file())
 
     def test_crash_after_empty_current_tmp_creation_recovers_old_pointer(self):
