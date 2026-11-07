@@ -211,7 +211,7 @@ class GenerationActivationTests(unittest.TestCase):
         self.assertEqual(approved_event["approval_method"], "ALAN_INTERACTIVE_APPROVAL")
         self.assertNotIn("records", approved_event)
         self.assertNotIn("content", approved_event)
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaisesRegex(nia.SnapshotError, "PENDING_NOT_FOUND"):
             nia.approve_pending(self.root, changed["envelope_hash"], f"ACTIVATE {changed['envelope_hash']}")
 
     def test_pending_bytes_are_revalidated_before_approval(self):
