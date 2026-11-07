@@ -48,7 +48,7 @@
           "createdAt": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
           "updatedAt": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
           "category": { "enum": ["GENERAL", "LEARNING", "ERROR", "PREFERENCE"] },
-          "hitCount": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+          "hitCount": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
           "source": { "type": ["string", "null"] },
           "id": { "type": "string", "minLength": 1 },
           "receiptStatus": { "$ref": "#/$defs/assessment" },
