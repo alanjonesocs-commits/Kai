@@ -185,6 +185,34 @@ class NiaMemorySnapshotBuilderTest {
     }
 
     @Test
+    fun rawJsonDepthLimitCountsTheEnvelopeParentContainer() {
+        val baseRecord = json.parseToJsonElement(
+            NiaMemorySnapshotBuilder.build(records = listOf(syntheticEntry())),
+        ).jsonObject["records"]!!.jsonArray.single().jsonObject
+
+        fun withNestedArrays(count: Int): String {
+            var nested: kotlinx.serialization.json.JsonElement = JsonPrimitive("bottom")
+            repeat(count) { nested = JsonArray(listOf(nested)) }
+            val record = JsonObject(baseRecord + ("depthTest" to nested))
+            return JsonArray(listOf(record)).toString()
+        }
+
+        // Envelope object + records array + record object + 29 unknown arrays = depth 32.
+        NiaMemorySnapshotBuilder.buildFromRawJson(
+            withNestedArrays(29),
+            snapshotId = "depth-32",
+            createdAtEpochMs = 100,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            NiaMemorySnapshotBuilder.buildFromRawJson(
+                withNestedArrays(30),
+                snapshotId = "depth-33",
+                createdAtEpochMs = 100,
+            )
+        }
+    }
+
+    @Test
     fun rawSettingsSnapshotReadsMemoryOnceAndNeverWrites() {
         val backing = MapSettings()
         backing.putString("agent_memories", "[]")
