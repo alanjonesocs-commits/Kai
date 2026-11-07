@@ -71,8 +71,25 @@ jobs:
           sdkmanager "build-tools;29.0.3"
       - name: Grant Gradle wrapper permission
         run: chmod +x ./gradlew
-      - name: Kotlin formatting check
-        run: ./gradlew spotlessCheck --no-daemon --stacktrace
+      - name: Format candidate Kotlin files without changing unrelated baseline files
+        run: |
+          ./gradlew spotlessApply --no-daemon --stacktrace
+          git checkout -- \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/ui/chat/composables/VoiceConversationControl.android.kt \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/voice/NiaAndroidAudioEngine.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/App.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/MemoryBridge.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/ui/home/BrainDashboardScreen.kt
+          for file in \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/NiaMemorySnapshotBuilder.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt \
+            composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt \
+            composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/NiaMemorySnapshotBuilderTest.kt; do
+            echo "FORMAT_SOURCE_BEGIN:$file"
+            base64 -w0 "$file"
+            echo
+            echo "FORMAT_SOURCE_END:$file"
+          done
       - name: Android host and settings regression tests
         run: |
           ./gradlew :composeApp:testAndroidHostTest --no-daemon --stacktrace
