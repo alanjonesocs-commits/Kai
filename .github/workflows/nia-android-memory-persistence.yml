@@ -1,0 +1,66 @@
+name: NIA Android Encrypted Memory Verification
+
+on:
+  push:
+    branches:
+      - nia-heart-brain-skin
+  pull_request:
+    branches:
+      - nia-heart-brain-skin
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nia-android-memory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  encrypted-memory:
+    name: Android encrypted MemoryStore persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out skin branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
+
+      - name: Grant Gradle wrapper permission
+        run: chmod +x ./gradlew
+
+      - name: Run encrypted-memory instrumentation test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: ./gradlew :androidApp:connectedFossDebugAndroidTest --no-daemon --stacktrace
+
+      - name: Upload Android instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nia-android-encrypted-memory-reports
+          path: |
+            androidApp/build/reports/androidTests/**
+            androidApp/build/outputs/androidTest-results/**
+          if-no-files-found: warn
+          retention-days: 7
