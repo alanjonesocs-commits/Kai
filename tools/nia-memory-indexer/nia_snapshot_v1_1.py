@@ -72,9 +72,8 @@ def _pairs_no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _check_tree(value: Any, depth: int = 0) -> None:
-    if depth > MAX_DEPTH:
-        raise SnapshotError("JSON_DEPTH_EXCEEDED")
+def _check_tree(value: Any, container_depth: int = 0) -> None:
+    """Count nested JSON containers, not scalar values or object member names."""
     if isinstance(value, str):
         try:
             value.encode("utf-8", errors="strict")
@@ -88,14 +87,20 @@ def _check_tree(value: Any, depth: int = 0) -> None:
     elif isinstance(value, float):
         raise SnapshotError("UNSUPPORTED_DECIMAL")
     elif isinstance(value, list):
+        next_depth = container_depth + 1
+        if next_depth > MAX_DEPTH:
+            raise SnapshotError("JSON_DEPTH_EXCEEDED")
         for item in value:
-            _check_tree(item, depth + 1)
+            _check_tree(item, next_depth)
     elif isinstance(value, dict):
+        next_depth = container_depth + 1
+        if next_depth > MAX_DEPTH:
+            raise SnapshotError("JSON_DEPTH_EXCEEDED")
         for key, item in value.items():
             if not isinstance(key, str):
                 raise SnapshotError("INVALID_OBJECT_KEY")
-            _check_tree(key, depth + 1)
-            _check_tree(item, depth + 1)
+            _check_tree(key, container_depth)
+            _check_tree(item, next_depth)
     else:
         raise SnapshotError("INVALID_JSON_VALUE")
 
@@ -221,13 +226,19 @@ def validate_snapshot(doc: Any) -> dict[str, Any]:
         seen_ids.add(record["id"])
         if not isinstance(record["content"], str):
             raise SnapshotError("RECORD_CONTENT_INVALID")
-        for field in ("createdAt", "updatedAt", "hitCount"):
+        for field in ("createdAt", "updatedAt"):
             if not _i64(record[field], nonnegative=True):
                 raise SnapshotError("RECORD_NUMBER_INVALID")
-        if record["category"] not in CATEGORIES:
+        # MemoryEntry.hitCount is Kotlin Int (32-bit), unlike the Long timestamps.
+        hit_count = record["hitCount"]
+        if not isinstance(hit_count, int) or isinstance(hit_count, bool) or not 0 <= hit_count <= 2**31 - 1:
+            raise SnapshotError("RECORD_HIT_COUNT_INVALID")
+        category = record["category"]
+        if not isinstance(category, str) or category not in CATEGORIES:
             raise SnapshotError("RECORD_CATEGORY_INVALID")
         for field in ("receiptStatus", "claimStatus", "factStatus", "resolutionStatus"):
-            if record[field] not in STATUSES:
+            status_value = record[field]
+            if not isinstance(status_value, str) or status_value not in STATUSES:
                 raise SnapshotError("RECORD_STATUS_INVALID")
         for field in ("source", "sourceConversationId"):
             if record[field] is not None and not isinstance(record[field], str):
@@ -299,11 +310,17 @@ def _fsync_dir(path: Path) -> None:
 
 def _read_current(root: Path) -> tuple[str | None, dict[str, str] | None]:
     current = root / "CURRENT"
+    if current.is_symlink():
+        raise SnapshotError("RECOVERY_NEEDED")
+    generations = root / "generations"
+    if generations.exists() or generations.is_symlink():
+        if generations.is_symlink() or not generations.is_dir():
+            raise SnapshotError("RECOVERY_NEEDED")
     if not current.exists():
-        generations = root / "generations"
         if generations.exists() and any(generations.iterdir()):
             raise SnapshotError("RECOVERY_NEEDED")
         return None, None
+    _private_dir(generations)
     if current.is_symlink() or not current.is_file():
         raise SnapshotError("RECOVERY_NEEDED")
     name = current.read_text("ascii").strip()
@@ -340,7 +357,9 @@ def _write_synced(path: Path, data: bytes) -> None:
 
 
 def _build_sqlite(db_path: Path, doc: dict[str, Any]) -> None:
-    with sqlite3.connect(db_path) as db:
+    os.chmod(db_path, 0o600) if db_path.exists() else None
+    db = sqlite3.connect(db_path)
+    try:
         db.execute("PRAGMA journal_mode=DELETE")
         db.execute("PRAGMA synchronous=FULL")
         db.execute("PRAGMA foreign_keys=ON")
@@ -369,6 +388,9 @@ def _build_sqlite(db_path: Path, doc: dict[str, Any]) -> None:
             raise SnapshotError("SQLITE_FOREIGN_KEY_FAILED")
         if db.execute("SELECT COUNT(*) FROM records").fetchone()[0] != doc["record_count"]:
             raise SnapshotError("SQLITE_RECORD_COUNT_MISMATCH")
+    finally:
+        db.close()
+
 
 
 def _active_decision(doc: dict[str, Any], active: dict[str, str] | None) -> str | None:
@@ -408,6 +430,7 @@ def _activate(root: Path, doc: dict[str, Any], previous: str | None) -> None:
             os.fsync(handle.fileno())
         _fsync_dir(temp)
         os.replace(temp, final)
+        _fsync_dir(staging)
         _fsync_dir(generations)
         pointer_tmp = root / "CURRENT.tmp"
         _write_synced(pointer_tmp, (doc["envelope_hash"] + "\n").encode("ascii"))
@@ -456,7 +479,9 @@ def index_snapshot(path: Path, root: Path) -> dict[str, Any]:
 def approve_pending(root: Path, envelope_hash: str, confirmation: str) -> dict[str, Any]:
     if not HEX_RE.fullmatch(envelope_hash) or confirmation != f"ACTIVATE {envelope_hash}":
         raise SnapshotError("APPROVAL_NOT_CONFIRMED")
-    pending = root / "pending" / envelope_hash
+    pending_dir = root / "pending"
+    _private_dir(pending_dir)
+    pending = pending_dir / envelope_hash
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(pending, flags)
     try:
