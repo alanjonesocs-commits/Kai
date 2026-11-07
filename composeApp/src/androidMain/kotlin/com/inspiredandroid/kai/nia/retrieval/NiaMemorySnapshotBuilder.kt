@@ -137,13 +137,7 @@ internal object NiaMemorySnapshotBuilder {
                 decoded.createdAt >= 0 && decoded.updatedAt >= 0 && decoded.hitCount >= 0 &&
                     decoded.provenance.all { it.observedAt >= 0 },
             ) { "RECORD_NUMBER_INVALID:$index" }
-            decoded.provenance.forEachIndexed { provenanceIndex, provenance ->
-                require(provenance.source == null || provenance.source.isNotBlank()) {
-                    "PROVENANCE_SOURCE_INVALID:$index:$provenanceIndex"
-                }
-                require(provenance.conversationId == null || provenance.conversationId.isNotBlank()) {
-                    "PROVENANCE_SOURCE_INVALID:$index:$provenanceIndex"
-                }
+            decoded.provenance.forEachIndexed { provenanceIndex, _ ->
                 val raw = (record["provenance"] as JsonArray)[provenanceIndex] as? JsonObject
                     ?: error("PROVENANCE_NOT_OBJECT:$index:$provenanceIndex")
                 require(requiredProvenanceFields.all { it in raw.keys }) {
