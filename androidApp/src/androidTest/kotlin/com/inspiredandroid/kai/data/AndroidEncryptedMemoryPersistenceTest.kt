@@ -1,5 +1,6 @@
 package com.inspiredandroid.kai.data
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.inspiredandroid.kai.createSecureSettings
 import kotlinx.coroutines.test.runTest
@@ -23,6 +24,7 @@ class AndroidEncryptedMemoryPersistenceTest {
     fun memorySurvivesReopeningEncryptedSettings() = runTest {
         val key = "nia_android_diag_${UUID.randomUUID()}"
         val firstStore = MemoryStore(AppSettings(createSecureSettings()))
+        Log.i("NIA_DIAG", "WRITE_ATTEMPT key=$key")
         val saved = firstStore.store(
             key = key,
             content = "encrypted persistence round-trip",
@@ -30,8 +32,13 @@ class AndroidEncryptedMemoryPersistenceTest {
         )
 
         try {
+            val immediate = firstStore.getAllMemories().singleOrNull { it.id == saved.id }
+            Log.i("NIA_DIAG", "IMMEDIATE_READ=${immediate?.content ?: "NULL"}")
+            assertNotNull("Memory was not readable immediately after store", immediate)
+
             val reopenedStore = MemoryStore(AppSettings(createSecureSettings()))
             val restored = reopenedStore.getAllMemories().singleOrNull { it.id == saved.id }
+            Log.i("NIA_DIAG", "REOPENED_SETTINGS_READ=${restored?.content ?: "NULL"}")
 
             assertNotNull("Memory was not readable from a fresh encrypted Settings instance", restored)
             assertEquals(saved.key, restored!!.key)
