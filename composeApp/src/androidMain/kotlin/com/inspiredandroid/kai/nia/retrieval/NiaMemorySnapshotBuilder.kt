@@ -255,19 +255,19 @@ internal object NiaMemorySnapshotBuilder {
             val char = value[index]
             when {
                 char == '"' -> append("\\\"")
-                char == '\\\\' -> append("\\\\\\\\")
-                char == '\b' -> append("\\\\b")
-                char == '\t' -> append("\\\\t")
-                char == '\n' -> append("\\\\n")
-                char == '\u000c' -> append("\\\\f")
-                char == '\r' -> append("\\\\r")
+                char == '\\' -> append("\\\\")
+                char == '\b' -> append("\\b")
+                char == '\t' -> append("\\t")
+                char == '\n' -> append("\\n")
+                char == '\u000c' -> append("\\f")
+                char == '\r' -> append("\\r")
                 char in '\uD800'..'\uDBFF' -> {
                     require(index + 1 < value.length && value[index + 1] in '\uDC00'..'\uDFFF') { "LONE_SURROGATE" }
                     append(char).append(value[index + 1])
                     index++
                 }
                 char in '\uDC00'..'\uDFFF' -> throw IllegalArgumentException("LONE_SURROGATE")
-                char.code <= 0x1f -> append("\\\\u").append(char.code.toString(16).padStart(4, '0'))
+                char.code <= 0x1f -> append("\\u").append(char.code.toString(16).padStart(4, '0'))
                 else -> append(char)
             }
             index++
@@ -368,10 +368,10 @@ internal object NiaMemorySnapshotBuilder {
                 val char = input[position++]
                 when {
                     char == '"' -> return result.toString()
-                    char == '\\\\' -> {
+                    char == '\\' -> {
                         require(position < input.length) { "JSON_ESCAPE_INVALID" }
                         when (val escaped = input[position++]) {
-                            '"', '\\\\', '/' -> result.append(escaped)
+                            '"', '\\', '/' -> result.append(escaped)
                             'b' -> result.append('\b')
                             'f' -> result.append('\u000c')
                             'n' -> result.append('\n')
@@ -397,7 +397,7 @@ internal object NiaMemorySnapshotBuilder {
             val first = hexCodeUnit()
             when {
                 first in 0xd800..0xdbff -> {
-                    require(position + 1 < input.length && input[position] == '\\\\' && input[position + 1] == 'u') {
+                    require(position + 1 < input.length && input[position] == '\\' && input[position + 1] == 'u') {
                         "LONE_SURROGATE"
                     }
                     position += 2
