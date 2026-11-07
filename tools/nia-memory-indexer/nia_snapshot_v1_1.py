@@ -578,7 +578,12 @@ def approve_pending(root: Path, envelope_hash: str, confirmation: str) -> dict[s
     _private_dir(pending_dir)
     pending = pending_dir / envelope_hash
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(pending, flags)
+    try:
+        fd = os.open(pending, flags)
+    except FileNotFoundError as exc:
+        raise SnapshotError("PENDING_NOT_FOUND") from exc
+    except OSError as exc:
+        raise SnapshotError("PENDING_OPEN_FAILED") from exc
     try:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES:
@@ -603,12 +608,20 @@ def approve_pending(root: Path, envelope_hash: str, confirmation: str) -> dict[s
             raise SnapshotError("BUSY") from exc
         previous, active = _read_current(root)
         decision = _active_decision(doc, active)
-        if decision in {"IDENTITY_CONFLICT", "ALREADY_INDEXED", "DUPLICATE_CONTENT"}:
+        if decision == "ALREADY_INDEXED":
+            pending.unlink(missing_ok=True)
+            _fsync_dir(pending.parent)
+            return {"decision": "ALREADY_ACTIVE", "envelope_hash": envelope_hash}
+        if decision in {"IDENTITY_CONFLICT", "DUPLICATE_CONTENT"}:
             raise SnapshotError("APPROVAL_NOT_APPLICABLE")
-        _activate(root, doc, previous)
-        pending.unlink()
+        history_status = _activate(root, doc, previous, activation_method="ALAN_INTERACTIVE_APPROVAL")
+        pending.unlink(missing_ok=True)
         _fsync_dir(pending.parent)
-        return {"decision": "APPROVED_AND_INDEXED", "envelope_hash": envelope_hash}
+        return {
+            "decision": "APPROVED_AND_INDEXED",
+            "envelope_hash": envelope_hash,
+            "history_status": "RECORDED" if history_status else "WRITE_FAILED",
+        }
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
