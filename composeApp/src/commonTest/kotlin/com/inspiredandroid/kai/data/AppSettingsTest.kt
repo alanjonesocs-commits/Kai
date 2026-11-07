@@ -9,6 +9,14 @@ import kotlin.test.assertTrue
 class AppSettingsTest {
 
     @Test
+    fun `default memory instructions require approval before persistent writes`() {
+        val instructions = AppSettings(MapSettings()).getMemoryInstructions()
+
+        assertTrue(instructions.contains("Do not call memory_store or memory_learn until the user explicitly approves"))
+        assertTrue(instructions.contains("Use memory_forget only when the user explicitly asks"))
+    }
+
+    @Test
     fun `migration only runs once so deleted services stay deleted`() {
         val settings = MapSettings()
         val appSettings = AppSettings(settings)

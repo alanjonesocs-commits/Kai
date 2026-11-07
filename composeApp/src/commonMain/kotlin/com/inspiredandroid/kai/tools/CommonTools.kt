@@ -170,7 +170,7 @@ object CommonTools {
     val memoryStoreToolInfo = ToolInfo(
         id = "memory_store",
         name = "Store Memory",
-        description = "Store or update a memory with a descriptive key",
+        description = "Store a memory only after the user explicitly approves that specific item",
         nameRes = Res.string.tool_memory_store_name,
         descriptionRes = Res.string.tool_memory_store_description,
         userToggleable = false,
@@ -188,7 +188,7 @@ object CommonTools {
     val memoryLearnToolInfo = ToolInfo(
         id = "memory_learn",
         name = "Learn Memory",
-        description = "Store a categorized learning, error resolution, or preference",
+        description = "Store a categorized learning only after the user explicitly approves that specific item",
         nameRes = Res.string.tool_memory_learn_name,
         descriptionRes = Res.string.tool_memory_learn_description,
         userToggleable = false,
@@ -278,7 +278,7 @@ object CommonTools {
     fun memoryStoreTool(memoryStore: MemoryStore) = object : Tool {
         override val schema = ToolSchema(
             name = "memory_store",
-            description = "Store or update a memory with a descriptive key. Use this proactively to remember user preferences, facts, and important information across conversations.",
+            description = "Store or update a memory with a descriptive key. Call only after the user explicitly approves this exact memory in the current conversation; sharing information alone is not consent to store it.",
             parameters = mapOf(
                 "key" to ParameterSchema(type = "string", description = "Descriptive key for the memory (e.g. user_name, preferred_language, project_details)", required = true),
                 "content" to ParameterSchema(type = "string", description = "The content to store", required = true),
@@ -296,7 +296,7 @@ object CommonTools {
     fun memoryForgetTool(memoryStore: MemoryStore) = object : Tool {
         override val schema = ToolSchema(
             name = "memory_forget",
-            description = "Delete a stored memory by its exact key.",
+            description = "Delete a stored memory by its exact key, only when the user explicitly asks you to forget or remove it.",
             parameters = mapOf(
                 "key" to ParameterSchema(type = "string", description = "The exact key of the memory to delete", required = true),
             ),
@@ -312,7 +312,7 @@ object CommonTools {
     fun memoryLearnTool(memoryStore: MemoryStore) = object : Tool {
         override val schema = ToolSchema(
             name = "memory_learn",
-            description = "Store a structured learning with a category. Use LEARNING for things that worked, ERROR for error resolutions, PREFERENCE for user corrections/preferences.",
+            description = "Store a structured learning with a category only after the user explicitly approves this exact item. Use LEARNING for things that worked, ERROR for error resolutions, and PREFERENCE for user corrections or preferences.",
             parameters = mapOf(
                 "key" to ParameterSchema(type = "string", description = "Descriptive key for the learning", required = true),
                 "content" to ParameterSchema(type = "string", description = "What was learned", required = true),

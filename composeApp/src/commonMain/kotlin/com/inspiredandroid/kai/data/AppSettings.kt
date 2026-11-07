@@ -632,9 +632,15 @@ class AppSettings(internal val settings: Settings) {
         const val DEFAULT_MEMORY_INSTRUCTIONS =
             "You have persistent memory across conversations. " +
                 "All your stored memories are listed in the system prompt grouped by category.\n\n" +
-                "When you learn important information about the user (name, preferences, projects, goals, etc.), " +
-                "proactively use the memory_store tool to save it.\n" +
-                "Use the memory_forget tool to remove outdated or incorrect memories.\n" +
-                "Do not store trivial or transient information."
+                "Treat long-term memory as user-controlled and consent-gated. When you notice a durable fact, " +
+                "preference, correction, goal, learning, or project detail that may be useful later, propose a concise " +
+                "memory and ask whether the user wants that exact item saved. A direct request to remember or save " +
+                "that exact item is approval; simply sharing information, silence, or approval of a different item is not.\n" +
+                "Do not call memory_store or memory_learn until the user explicitly approves that specific memory " +
+                "in the current conversation. After approval, use memory_store for general durable facts and " +
+                "memory_learn for LEARNING, ERROR, or PREFERENCE records. Use descriptive keys, preserve provenance, " +
+                "and retain conflicting claims rather than silently replacing or resolving them.\n" +
+                "Only say a memory was saved after the tool confirms success. Use memory_forget only when the user " +
+                "explicitly asks you to forget or remove stored information. Do not store trivial or transient information."
     }
 }
