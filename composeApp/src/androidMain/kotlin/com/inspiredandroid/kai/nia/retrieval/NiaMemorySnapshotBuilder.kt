@@ -191,7 +191,9 @@ internal object NiaMemorySnapshotBuilder {
             put("hash_scope", HASH_SCOPE)
         }
         val envelopeHash = sha256(canonicalBytes(unsigned))
-        return canonicalBytes(JsonObject(unsigned + ("envelope_hash" to JsonPrimitive(envelopeHash)))).decodeToString()
+        val completeEnvelope = canonicalBytes(JsonObject(unsigned + ("envelope_hash" to JsonPrimitive(envelopeHash))))
+        require(completeEnvelope.size <= MAX_BYTES) { "SNAPSHOT_SIZE_INVALID" }
+        return completeEnvelope.decodeToString()
     }
 
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
@@ -307,7 +309,8 @@ internal object NiaMemorySnapshotBuilder {
         fun validate() {
             utf8LengthAtMost(input)
             whitespace()
-            value(0)
+            // The raw records array sits inside the envelope object (depth 1).
+            value(1)
             whitespace()
             require(position == input.length) { "TRAILING_JSON_DATA" }
         }
