@@ -78,7 +78,7 @@ class CanonicalAndParsingTests(unittest.TestCase):
     def test_rejects_bom_trailing_data_and_excess_depth(self):
         valid = FIXTURE.read_bytes()
         with self.assertRaisesRegex(nia.SnapshotError, "UTF8_BOM_FORBIDDEN"):
-            nia.parse_snapshot_bytes(b"\\xef\\xbb\\xbf" + valid)
+            nia.parse_snapshot_bytes(bytes([0xEF, 0xBB, 0xBF]) + valid)
         with self.assertRaises(nia.SnapshotError):
             nia.parse_snapshot_bytes(valid + b" {}")
         nested = ("[" * 34 + "0" + "]" * 34).encode()
