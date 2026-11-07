@@ -138,12 +138,19 @@ actual fun createSecureSettings(): Settings {
     val context: Context by inject(Context::class.java)
     return try {
         SharedPreferencesSettings(createEncryptedPrefs(context))
-    } catch (_: Exception) {
-        // AEADBadTagException occurs when Android Auto Backup restores the encrypted
-        // prefs file but the Keystore key is hardware-bound and doesn't transfer.
-        // Delete the corrupted file and recreate fresh encrypted prefs.
-        context.deleteSharedPreferences("kai_secure_prefs")
-        SharedPreferencesSettings(createEncryptedPrefs(context))
+    } catch (e: Exception) {
+        // Fail closed: never delete or overwrite the existing secure preferences when
+        // initialization fails. A transient Keystore, IO, or library error must not
+        // become a destructive data-recovery operation.
+        android.util.Log.e(
+            "Platform",
+            "Secure prefs initialization failed; existing user data was preserved",
+            e,
+        )
+        throw IllegalStateException(
+            "Secure storage is currently unreadable. Existing data was preserved.",
+            e,
+        )
     }
 }
 
