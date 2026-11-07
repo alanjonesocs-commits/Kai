@@ -40,7 +40,7 @@ From this directory:
     python3 nia_snapshot_v1_1.py rollback --root ./nia-index-v1.1 --envelope-hash PREVIOUS_64_CHARACTER_HASH
     python3 nia_snapshot_v1_1.py approve-activation --root ./nia-index-v1.1 --envelope-hash PENDING_64_CHARACTER_HASH
 
-Changed snapshots without a matching trusted generation authority/counter are saved as pending and return `NEEDS_VERIFICATION`. Approval requires an interactive exact confirmation:
+Every changed-content snapshot is saved as pending and returns `NEEDS_VERIFICATION`, even when its embedded `generation_authority` matches the previous snapshot and its `source_generation` is higher. Those fields are unsigned producer-supplied metadata: they can detect a stale/replayed counter, but they cannot authenticate the producer or bypass Alan's approval. Automatic activation based on a generation authority must remain disabled until a signature or independently authenticated transport/trust mechanism is designed and verified. Approval requires an interactive exact confirmation:
 
     ACTIVATE <the exact envelope hash>
 
