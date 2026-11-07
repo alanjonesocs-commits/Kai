@@ -158,13 +158,18 @@ class GenerationActivationTests(unittest.TestCase):
         self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
 
-    def test_generation_counter_replay_is_rejected_even_when_snapshot_is_unsigned(self):
+    def test_lower_unsigned_generation_is_preserved_for_manual_review(self):
         first = snapshot("generation-current", [record("g2", "key", "Current.")], 2, "NIA15")
         nia.index_snapshot(self.put(first, "generation-current.json"), self.root)
         older = snapshot("generation-old", [record("g1", "key", "Older.")], 1, "NIA15")
-        with self.assertRaisesRegex(nia.SnapshotError, "SOURCE_GENERATION_NOT_NEWER"):
-            nia.index_snapshot(self.put(older, "generation-old.json"), self.root)
+        result = nia.index_snapshot(self.put(older, "generation-old.json"), self.root)
+        self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        preview = nia.pending_preview(self.root, older["envelope_hash"])
+        self.assertEqual(preview["source_generation"], 1)
+        approved = self.approve(older)
+        self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), older["envelope_hash"])
 
     def test_history_write_failure_does_not_undo_durable_activation(self):
         doc = snapshot("history-failure")
