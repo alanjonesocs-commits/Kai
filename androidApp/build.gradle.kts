@@ -27,6 +27,7 @@ android {
                 .get()
                 .toInt()
         versionName = libs.versions.appVersion.get()
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     flavorDimensions += "distribution"
@@ -98,5 +99,8 @@ dependencies {
     implementation(libs.tts.compose)
     implementation(libs.compose.components.uiToolingPreview)
     debugImplementation(libs.compose.ui.tooling)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     "playStoreImplementation"(libs.play.review)
 }
