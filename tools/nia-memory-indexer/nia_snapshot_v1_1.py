@@ -17,6 +17,7 @@ import sqlite3
 import stat
 import sys
 import tempfile
+from urllib.parse import quote
 from pathlib import Path
 from typing import Any
 
@@ -299,6 +300,9 @@ def _fsync_dir(path: Path) -> None:
 def _read_current(root: Path) -> tuple[str | None, dict[str, str] | None]:
     current = root / "CURRENT"
     if not current.exists():
+        generations = root / "generations"
+        if generations.exists() and any(generations.iterdir()):
+            raise SnapshotError("RECOVERY_NEEDED")
         return None, None
     if current.is_symlink() or not current.is_file():
         raise SnapshotError("RECOVERY_NEEDED")
@@ -309,7 +313,7 @@ def _read_current(root: Path) -> tuple[str | None, dict[str, str] | None]:
     if db_path.is_symlink() or not db_path.is_file():
         raise SnapshotError("RECOVERY_NEEDED")
     try:
-        uri = f"file:{db_path.as_posix()}?mode=ro"
+        uri = "file:" + quote(str(db_path.resolve())) + "?mode=ro"
         with sqlite3.connect(uri, uri=True) as db:
             if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                 raise SnapshotError("RECOVERY_NEEDED")
