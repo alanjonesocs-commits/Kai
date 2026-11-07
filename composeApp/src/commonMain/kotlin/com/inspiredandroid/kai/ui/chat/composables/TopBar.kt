@@ -60,6 +60,9 @@ internal fun TopBar(
     onToggleSandbox: () -> Unit,
     onShowHistory: () -> Unit,
     brainState: NiaVisualState = NiaVisualState.IDLE,
+    lastSavedId: String? = null,
+    lastSavedAt: Long? = null,
+    isSavePending: Boolean = false,
     navigationTabBar: (@Composable () -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -73,10 +76,10 @@ internal fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            HolographicBrain(
-                modifier = Modifier.size(42.dp),
-                size = 42.dp,
+            HeartBrainDuo(
+                modifier = Modifier,
                 state = brainState,
+                isMini = true,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -160,6 +163,12 @@ internal fun TopBar(
             }
         }
 
+        LocalSaveBanner(
+            lastSavedId = lastSavedId,
+            lastSavedAt = lastSavedAt,
+            isSavePending = isSavePending,
+        )
+
         if (navigationTabBar != null) {
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -167,6 +176,62 @@ internal fun TopBar(
             ) {
                 navigationTabBar()
             }
+        }
+    }
+}
+
+private fun formatSaveTime(epochMillis: Long): String {
+    val local = Instant.fromEpochMilliseconds(epochMillis)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+    fun twoDigits(value: Int) = value.toString().padStart(2, '0')
+    return "${twoDigits(local.hour)}:${twoDigits(local.minute)}:${twoDigits(local.second)}"
+}
+
+@Composable
+private fun LocalSaveBanner(
+    lastSavedId: String?,
+    lastSavedAt: Long?,
+    isSavePending: Boolean,
+) {
+    val hasConfirmedSave = lastSavedId != null && lastSavedAt != null
+    val color = when {
+        isSavePending -> Color(0xFFFBBF24)
+        hasConfirmedSave -> Color(0xFF22C55E)
+        else -> Color(0xFFEF4444)
+    }
+    val bannerBackground = when {
+        isSavePending -> Color(0xFF302914)
+        hasConfirmedSave -> Color(0xFF14301F)
+        else -> Color(0xFF301414)
+    }
+    val message = when {
+        isSavePending -> "SAVE PENDING — awaiting local database confirmation"
+        hasConfirmedSave -> "LOCAL SAVE CONFIRMED · ID ${lastSavedId!!.take(6)}… · ${formatSaveTime(lastSavedAt!!)}"
+        else -> "UNVERIFIED — NOT SAVED TO PHONE"
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        color = bannerBackground,
+        shape = RoundedCornerShape(10.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .background(color, CircleShape),
+            )
+            Text(
+                text = message,
+                color = color,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.15.sp,
+            )
         }
     }
 }
