@@ -357,8 +357,8 @@ def _write_synced(path: Path, data: bytes) -> None:
 
 
 def _build_sqlite(db_path: Path, doc: dict[str, Any]) -> None:
-    os.chmod(db_path, 0o600) if db_path.exists() else None
     db = sqlite3.connect(db_path)
+    os.chmod(db_path, 0o600)
     try:
         db.execute("PRAGMA journal_mode=DELETE")
         db.execute("PRAGMA synchronous=FULL")
@@ -524,19 +524,91 @@ def approve_pending(root: Path, envelope_hash: str, confirmation: str) -> dict[s
 def recover_index(root: Path) -> dict[str, Any]:
     _private_dir(root)
     staging = root / "staging"
-    if staging.exists() and not staging.is_symlink():
-        for item in staging.iterdir():
+    _private_dir(staging)
+    for item in staging.iterdir():
+        if item.is_symlink() or item.is_file():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item)
+    _fsync_dir(staging)
+    pending = root / "pending"
+    if pending.exists() or pending.is_symlink():
+        _private_dir(pending)
+        for item in pending.glob("*.tmp"):
             if item.is_symlink() or item.is_file():
                 item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
-        _fsync_dir(staging)
-    pointer_tmp = root / "CURRENT.tmp"
-    if pointer_tmp.exists() or pointer_tmp.is_symlink():
-        pointer_tmp.unlink()
-        _fsync_dir(root)
+        _fsync_dir(pending)
+    for name in ("CURRENT.tmp",):
+        pointer_tmp = root / name
+        if pointer_tmp.exists() or pointer_tmp.is_symlink():
+            pointer_tmp.unlink()
+            _fsync_dir(root)
     current, _meta = _read_current(root)
     return {"decision": "RECOVERED", "current": current}
+
+
+def search_index(root: Path, query: str, limit: int = 20) -> list[dict[str, Any]]:
+    if not query.strip():
+        return []
+    current, _meta = _read_current(root)
+    if current is None:
+        return []
+    db_path = root / "generations" / current / "index.sqlite"
+    uri = "file:" + quote(str(db_path.resolve())) + "?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True) as db:
+            rows = db.execute(
+                """SELECT r.id, r.raw_json, bm25(search)
+                   FROM search JOIN records r ON r.id = search.id
+                   WHERE search MATCH ?
+                   ORDER BY bm25(search) LIMIT ?""",
+                (query, max(1, min(limit, 100))),
+            ).fetchall()
+    except sqlite3.Error as exc:
+        raise SnapshotError("SEARCH_QUERY_INVALID") from exc
+    return [
+        {"record_id": row[0], "raw_record": json.loads(row[1]), "rank": row[2]}
+        for row in rows
+    ]
+
+
+def rollback_generation(root: Path, envelope_hash: str) -> dict[str, Any]:
+    if not HEX_RE.fullmatch(envelope_hash):
+        raise SnapshotError("ENVELOPE_HASH_INVALID")
+    _private_dir(root)
+    _private_dir(root / "generations")
+    generation = root / "generations" / envelope_hash
+    db_path = generation / "index.sqlite"
+    if generation.is_symlink() or db_path.is_symlink() or not db_path.is_file():
+        raise SnapshotError("GENERATION_NOT_FOUND")
+    fd = os.open(root / "index.lock", os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise SnapshotError("BUSY") from exc
+        uri = "file:" + quote(str(db_path.resolve())) + "?mode=ro"
+        try:
+            with sqlite3.connect(uri, uri=True) as db:
+                if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                    raise SnapshotError("GENERATION_INVALID")
+                meta = dict(db.execute("SELECT key,value FROM metadata"))
+                if meta.get("envelope_hash") != envelope_hash:
+                    raise SnapshotError("GENERATION_HASH_MISMATCH")
+        except sqlite3.Error as exc:
+            raise SnapshotError("GENERATION_INVALID") from exc
+        previous, _active = _read_current(root)
+        temp = root / "CURRENT.rollback.tmp"
+        _write_synced(temp, (envelope_hash + "\\n").encode("ascii"))
+        os.replace(temp, root / "CURRENT")
+        _fsync_dir(root)
+        return {"decision": "ROLLED_BACK", "envelope_hash": envelope_hash, "previous": previous}
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -552,6 +624,13 @@ def main(argv: list[str] | None = None) -> int:
     approve.add_argument("--envelope-hash", required=True)
     recover = sub.add_parser("recover")
     recover.add_argument("--root", type=Path, required=True)
+    search = sub.add_parser("search")
+    search.add_argument("--root", type=Path, required=True)
+    search.add_argument("--limit", type=int, default=20)
+    search.add_argument("query")
+    rollback = sub.add_parser("rollback")
+    rollback.add_argument("--root", type=Path, required=True)
+    rollback.add_argument("--envelope-hash", required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "validate":
@@ -563,6 +642,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"pending_hash": args.envelope_hash}, ensure_ascii=True))
             confirmation = input(f"Type ACTIVATE {args.envelope_hash} to approve this exact snapshot: ")
             result = approve_pending(args.root, args.envelope_hash, confirmation)
+        elif args.command == "search":
+            result = search_index(args.root, args.query, args.limit)
+        elif args.command == "rollback":
+            result = rollback_generation(args.root, args.envelope_hash)
         else:
             result = recover_index(args.root)
         print(json.dumps(result, ensure_ascii=True, indent=2))
