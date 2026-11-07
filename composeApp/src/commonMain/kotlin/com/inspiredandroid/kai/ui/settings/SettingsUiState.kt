@@ -72,6 +72,7 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.System,
     val isMemoryEnabled: Boolean = true,
     val memories: ImmutableList<MemoryEntry> = persistentListOf(),
+    val memorySaveError: String? = null,
     val isSchedulingEnabled: Boolean = true,
     val scheduledTasks: ImmutableList<ScheduledTask> = persistentListOf(),
     val isDaemonEnabled: Boolean = false,

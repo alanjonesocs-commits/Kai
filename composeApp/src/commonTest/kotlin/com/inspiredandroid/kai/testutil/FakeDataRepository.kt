@@ -419,6 +419,27 @@ class FakeDataRepository : DataRepository {
 
     override fun getMemories(): List<MemoryEntry> = memories.toList()
 
+    override suspend fun storeMemory(key: String, content: String): MemoryEntry {
+        memories.firstOrNull { it.key == key && it.content == content }?.let { return it }
+        val idBase = if (memories.any { it.key == key }) "$key:${memories.size}" else key
+        var id = idBase
+        var suffix = 1
+        while (memories.any { it.id == id }) {
+            id = "$idBase:$suffix"
+            suffix++
+        }
+        val now = memories.size.toLong() + 1L
+        val entry = MemoryEntry(
+            key = key,
+            content = content,
+            createdAt = now,
+            updatedAt = now,
+            id = id,
+        )
+        memories.add(entry)
+        return entry
+    }
+
     override suspend fun deleteMemory(id: String) {
         memories.removeAll { it.id == id }
     }

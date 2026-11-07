@@ -101,6 +101,7 @@ interface DataRepository {
     fun isMemoryEnabled(): Boolean
     fun setMemoryEnabled(enabled: Boolean)
     fun getMemories(): List<MemoryEntry>
+    suspend fun storeMemory(key: String, content: String): MemoryEntry
     suspend fun deleteMemory(id: String)
     suspend fun updateMemoryContent(id: String, content: String)
 

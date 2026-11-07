@@ -516,6 +516,22 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `onAddMemory stores the entry and refreshes settings state`() = runTest {
+        val viewModel = SettingsViewModel(fakeRepository, fakeDaemonController, fakeNotificationPermissionController, noOpScheduler, testDispatcher)
+
+        viewModel.state.test {
+            awaitItem()
+            viewModel.actions.onAddMemory("project", "NIA manual memory")
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val updated = awaitItem()
+            assertEquals("project", updated.memories.single().key)
+            assertEquals("NIA manual memory", updated.memories.single().content)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `onToggleScheduling persists and reflects in state`() = runTest {
         val viewModel = SettingsViewModel(fakeRepository, fakeDaemonController, fakeNotificationPermissionController, noOpScheduler, testDispatcher)
 

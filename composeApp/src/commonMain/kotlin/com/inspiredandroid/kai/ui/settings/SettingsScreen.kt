@@ -195,6 +195,11 @@ fun SettingsScreenContent(
         }
     }
 
+    LaunchedEffect(uiState.memorySaveError) {
+        val error = uiState.memorySaveError ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(error)
+    }
+
     val pendingDeletion = uiState.pendingDeletion
     val filteredMemories = remember(uiState.memories, pendingDeletion) {
         if (pendingDeletion is PendingDeletion.Memory) uiState.memories.filter { it.id != pendingDeletion.id }.toImmutableList() else uiState.memories

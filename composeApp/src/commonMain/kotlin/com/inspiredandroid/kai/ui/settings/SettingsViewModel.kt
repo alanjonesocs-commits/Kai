@@ -157,6 +157,7 @@ class SettingsViewModel(
         onToggleDynamicUi = ::onToggleDynamicUi,
         onChangeThemeMode = ::onChangeThemeMode,
         onToggleMemory = ::onToggleMemory,
+        onAddMemory = ::onAddMemory,
         onDeleteMemory = ::onDeleteMemory,
         onUpdateMemory = ::onUpdateMemory,
         onToggleScheduling = ::onToggleScheduling,
@@ -506,6 +507,29 @@ class SettingsViewModel(
     private fun onToggleMemory(enabled: Boolean) {
         dataRepository.setMemoryEnabled(enabled)
         _state.update { it.copy(isMemoryEnabled = enabled) }
+    }
+
+    private fun onAddMemory(key: String, content: String) {
+        val cleanKey = key.trim()
+        val cleanContent = content.trim()
+        if (cleanKey.isBlank() || cleanContent.isBlank()) return
+
+        _state.update { it.copy(memorySaveError = null) }
+        viewModelScope.launch(backgroundDispatcher) {
+            try {
+                dataRepository.storeMemory(cleanKey, cleanContent)
+                _state.update {
+                    it.copy(
+                        memories = dataRepository.getMemories().toImmutableList(),
+                        memorySaveError = null,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(memorySaveError = e.message ?: "Unable to save memory")
+                }
+            }
+        }
     }
 
     private fun onDeleteMemory(id: String) {

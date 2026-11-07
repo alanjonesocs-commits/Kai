@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +54,13 @@ import kai.composeapp.generated.resources.execution_log_status_fail
 import kai.composeapp.generated.resources.execution_log_status_ok
 import kai.composeapp.generated.resources.settings_heartbeat_recent
 import kai.composeapp.generated.resources.settings_memories
+import kai.composeapp.generated.resources.settings_memories_add
+import kai.composeapp.generated.resources.settings_memories_add_cancel
+import kai.composeapp.generated.resources.settings_memories_add_content
+import kai.composeapp.generated.resources.settings_memories_add_description
+import kai.composeapp.generated.resources.settings_memories_add_key
+import kai.composeapp.generated.resources.settings_memories_add_save
+import kai.composeapp.generated.resources.settings_memories_add_title
 import kai.composeapp.generated.resources.settings_memories_all_title
 import kai.composeapp.generated.resources.settings_memories_delete
 import kai.composeapp.generated.resources.settings_memories_description
@@ -111,6 +120,7 @@ internal fun AgentContent(uiState: SettingsUiState, actions: SettingsActions) {
                     memories = uiState.memories,
                     onDeleteMemory = actions.onDeleteMemory,
                     onUpdateMemory = actions.onUpdateMemory,
+                    onAddMemory = actions.onAddMemory,
                     isMemoryEnabled = uiState.isMemoryEnabled,
                     onToggleMemory = actions.onToggleMemory,
                 )
@@ -301,10 +311,14 @@ private fun MemoryList(
     memories: ImmutableList<MemoryEntry>,
     onDeleteMemory: (String) -> Unit,
     onUpdateMemory: (String, String) -> Unit,
+    onAddMemory: (String, String) -> Unit,
     isMemoryEnabled: Boolean,
     onToggleMemory: (Boolean) -> Unit,
 ) {
     var showAllDialog by remember { mutableStateOf(false) }
+    var showAddMemoryDialog by remember { mutableStateOf(false) }
+    var newMemoryKey by remember { mutableStateOf("") }
+    var newMemoryContent by remember { mutableStateOf("") }
     var editingMemory by remember { mutableStateOf<MemoryEntry?>(null) }
 
     val sortedMemories = remember(memories) {
@@ -322,6 +336,17 @@ private fun MemoryList(
         Spacer(Modifier.height(12.dp))
 
         if (isMemoryEnabled) {
+            FloatingActionButton(
+                onClick = { showAddMemoryDialog = true },
+                modifier = Modifier.align(Alignment.End).handCursor(),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(Res.string.settings_memories_add),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+
             previewMemories.forEach { memory ->
                 SettingsListItem(
                     title = memory.key,
@@ -350,6 +375,62 @@ private fun MemoryList(
             onDismiss = { showAllDialog = false },
             onDeleteMemory = onDeleteMemory,
             onEditMemory = { editingMemory = it },
+        )
+    }
+
+    if (showAddMemoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddMemoryDialog = false },
+            title = { Text(stringResource(Res.string.settings_memories_add_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(Res.string.settings_memories_add_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    KaiOutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = newMemoryKey,
+                        onValueChange = { newMemoryKey = it },
+                        label = { Text(stringResource(Res.string.settings_memories_add_key)) },
+                    )
+                    KaiOutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = newMemoryContent,
+                        onValueChange = { newMemoryContent = it },
+                        minLines = 3,
+                        maxLines = 8,
+                        label = { Text(stringResource(Res.string.settings_memories_add_content)) },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onAddMemory(newMemoryKey.trim(), newMemoryContent.trim())
+                        showAddMemoryDialog = false
+                        newMemoryKey = ""
+                        newMemoryContent = ""
+                    },
+                    enabled = newMemoryKey.isNotBlank() && newMemoryContent.isNotBlank(),
+                    modifier = Modifier.handCursor(),
+                ) {
+                    Text(stringResource(Res.string.settings_memories_add_save))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddMemoryDialog = false
+                        newMemoryKey = ""
+                        newMemoryContent = ""
+                    },
+                    modifier = Modifier.handCursor(),
+                ) {
+                    Text(stringResource(Res.string.settings_memories_add_cancel))
+                }
+            },
         )
     }
 
