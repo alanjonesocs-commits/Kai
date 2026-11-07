@@ -393,6 +393,54 @@ def _build_sqlite(db_path: Path, doc: dict[str, Any]) -> None:
 
 
 
+def _verify_existing_generation(generation_dir: Path, doc: dict[str, Any]) -> None:
+    """Reuse only a complete immutable generation for this exact snapshot."""
+    db_path = generation_dir / "index.sqlite"
+    if generation_dir.is_symlink() or db_path.is_symlink() or not db_path.is_file():
+        raise SnapshotError("GENERATION_EXISTING_INVALID")
+    uri = "file:" + quote(str(db_path.resolve())) + "?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True) as db:
+            if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise SnapshotError("GENERATION_EXISTING_INVALID")
+            meta = dict(db.execute("SELECT key,value FROM metadata"))
+            expected = {
+                "schema_version": VERSION,
+                "snapshot_id": doc["snapshot_id"],
+                "records_hash": doc["records_hash"],
+                "envelope_hash": doc["envelope_hash"],
+                "created_at_epoch_ms": str(doc["created_at_epoch_ms"]),
+                "record_count": str(doc["record_count"]),
+                "generation_authority": doc["generation_authority"] or "",
+                "source_generation": "" if doc["source_generation"] is None else str(doc["source_generation"]),
+            }
+            if any(meta.get(key) != value for key, value in expected.items()):
+                raise SnapshotError("GENERATION_EXISTING_INVALID")
+            rows = db.execute("SELECT raw_json FROM records ORDER BY rowid").fetchall()
+            indexed_records = []
+            for (raw_record,) in rows:
+                record = json.loads(
+                    raw_record,
+                    object_pairs_hook=_pairs_no_duplicates,
+                    parse_int=_parse_int,
+                    parse_float=_reject_number,
+                    parse_constant=_reject_number,
+                )
+                if canonical_json(record).decode("utf-8") != raw_record:
+                    raise SnapshotError("GENERATION_EXISTING_INVALID")
+                indexed_records.append(record)
+            if len(indexed_records) != doc["record_count"] or indexed_records != doc["records"]:
+                raise SnapshotError("GENERATION_EXISTING_INVALID")
+            if records_digest(indexed_records) != doc["records_hash"]:
+                raise SnapshotError("GENERATION_EXISTING_INVALID")
+            if db.execute("SELECT COUNT(*) FROM search").fetchone()[0] != doc["record_count"]:
+                raise SnapshotError("GENERATION_EXISTING_INVALID")
+    except SnapshotError:
+        raise
+    except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
+        raise SnapshotError("GENERATION_EXISTING_INVALID") from exc
+
+
 def _active_decision(doc: dict[str, Any], active: dict[str, str] | None) -> str | None:
     if not active:
         return None
@@ -419,27 +467,28 @@ def _activate(root: Path, doc: dict[str, Any], previous: str | None) -> None:
     staging = root / "staging"
     _private_dir(staging)
     final = generations / doc["envelope_hash"]
-    if final.exists():
-        raise SnapshotError("GENERATION_ALREADY_EXISTS")
-    temp = Path(tempfile.mkdtemp(prefix=".build-", dir=staging))
-    os.chmod(temp, 0o700)
-    try:
-        db_path = temp / "index.sqlite"
-        _build_sqlite(db_path, doc)
-        with db_path.open("rb") as handle:
-            os.fsync(handle.fileno())
-        _fsync_dir(temp)
-        os.replace(temp, final)
-        _fsync_dir(staging)
-        _fsync_dir(generations)
-        pointer_tmp = root / "CURRENT.tmp"
-        _write_synced(pointer_tmp, (doc["envelope_hash"] + "\n").encode("ascii"))
-        os.replace(pointer_tmp, root / "CURRENT")
-        _fsync_dir(root)
-    except Exception:
-        if temp.exists():
-            shutil.rmtree(temp, ignore_errors=True)
-        raise
+    if final.exists() or final.is_symlink():
+        _verify_existing_generation(final, doc)
+    else:
+        temp = Path(tempfile.mkdtemp(prefix=".build-", dir=staging))
+        os.chmod(temp, 0o700)
+        try:
+            db_path = temp / "index.sqlite"
+            _build_sqlite(db_path, doc)
+            with db_path.open("rb") as handle:
+                os.fsync(handle.fileno())
+            _fsync_dir(temp)
+            os.replace(temp, final)
+            _fsync_dir(staging)
+            _fsync_dir(generations)
+        except Exception:
+            if temp.exists():
+                shutil.rmtree(temp, ignore_errors=True)
+            raise
+    pointer_tmp = root / "CURRENT.tmp"
+    _write_synced(pointer_tmp, (doc["envelope_hash"] + "\\n").encode("ascii"))
+    os.replace(pointer_tmp, root / "CURRENT")
+    _fsync_dir(root)
 
 
 def index_snapshot(path: Path, root: Path) -> dict[str, Any]:
