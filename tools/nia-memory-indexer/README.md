@@ -26,6 +26,8 @@ NIA-CJ1 uses UTF-8 without BOM, compact canonical output, UTF-16 code-unit key o
 
 The 32 MiB maximum is **provisional**. It must not be treated as an Android-safe limit until Pixel 9 heap and peak-allocation measurements are completed. The 30-second SQLite build figure is a proposed benchmark target, not a guarantee or hard implementation rule.
 
+The current Android source is read through EncryptedSharedPreferences, whose API returns a fully materialised String. The current size check therefore runs **after that String has been allocated**, but before the JSON parse tree and canonical output are built. It is a parser/secondary-allocation guard, not a true pre-allocation cap. A genuine pre-allocation limit would require a streaming or chunked memory storage/read design; do not claim that the current SharedPreferences API meets that stronger requirement.
+
 ### 1.1 commands
 
 From this directory:
