@@ -283,7 +283,9 @@ class AppSettings(internal val settings: Settings) {
     fun readMemoriesJsonForSnapshot(): RawMemoryJsonReadResult = try {
         when (val raw = settings.getStringOrNull(KEY_AGENT_MEMORIES)) {
             null -> RawMemoryJsonReadResult.Missing
+
             "" -> RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_BLANK")
+
             else -> if (raw.isBlank()) {
                 RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_BLANK")
             } else {
