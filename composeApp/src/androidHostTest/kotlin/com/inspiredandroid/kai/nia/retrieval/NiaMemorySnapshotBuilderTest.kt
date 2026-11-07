@@ -162,7 +162,7 @@ class NiaMemorySnapshotBuilderTest {
             NiaMemorySnapshotBuilder.buildFromRawJson("""[{"a":1,"a":2}]""")
         }
         assertFailsWith<IllegalArgumentException> {
-            NiaMemorySnapshotBuilder.buildFromRawJson("[{\"a\":1,\"\\\\u0061\":2}]")
+            NiaMemorySnapshotBuilder.buildFromRawJson("[{\"a\":1,\"\\u0061\":2}]")
         }
         assertFailsWith<IllegalArgumentException> {
             NiaMemorySnapshotBuilder.buildFromRawJson("""[{"unknown":{"nested":1,"nested":2}}]""")
@@ -175,8 +175,8 @@ class NiaMemorySnapshotBuilderTest {
             """[{"unknown":-0}]""",
             """[{"unknown":1.0}]""",
             """[{"unknown":1e2}]""",
-            "[{\"unknown\":\"\\\\ud800\"}]",
-            "[{\"unknown\":\"\\\\udc00\"}]",
+            "[{\"unknown\":\"\\ud800\"}]",
+            "[{\"unknown\":\"\\udc00\"}]",
         )) {
             assertFailsWith<IllegalArgumentException> {
                 NiaMemorySnapshotBuilder.buildFromRawJson(raw)
