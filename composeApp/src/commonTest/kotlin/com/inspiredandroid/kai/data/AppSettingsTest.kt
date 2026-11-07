@@ -240,7 +240,7 @@ class AppSettingsTest {
         assertTrue(instances.any { it.serviceId == Service.OpenAI.id })
         assertTrue(instances.any { it.serviceId == Service.Gemini.id })
     }
-    
+
     @Test
     fun `snapshot memory reader distinguishes missing present blank and unreadable`() {
         val backing = MapSettings()
