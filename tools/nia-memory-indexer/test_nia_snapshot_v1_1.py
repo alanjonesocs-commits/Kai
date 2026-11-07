@@ -85,6 +85,24 @@ class CanonicalAndParsingTests(unittest.TestCase):
         with self.assertRaises(nia.SnapshotError):
             nia.parse_snapshot_bytes(nested)
 
+    def test_record_unknown_field_depth_limit_counts_envelope_containers(self):
+        doc = json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+        def with_nested_arrays(count):
+            nested = "bottom"
+            for _ in range(count):
+                nested = [nested]
+            candidate = copy.deepcopy(doc)
+            candidate["records"][0]["depthTest"] = nested
+            candidate["records_hash"] = nia.records_digest(candidate["records"])
+            candidate["envelope_hash"] = nia.envelope_digest(candidate)
+            return nia.canonical_json(candidate)
+
+        # Envelope object + records array + record object + 29 unknown arrays = depth 32.
+        nia.parse_snapshot_bytes(with_nested_arrays(29))
+        with self.assertRaisesRegex(nia.SnapshotError, "JSON_DEPTH_EXCEEDED"):
+            nia.parse_snapshot_bytes(with_nested_arrays(30))
+
     def test_closed_envelope_and_semantic_tamper_detection(self):
         doc = snapshot()
         extra = copy.deepcopy(doc)
