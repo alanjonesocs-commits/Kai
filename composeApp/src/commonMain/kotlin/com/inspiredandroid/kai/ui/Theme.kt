@@ -95,9 +95,27 @@ fun ColorScheme.withNiaIdentity(): ColorScheme {
         surfaceVariant = softSurface,
         surfaceContainerLowest = canvas,
         surfaceContainerLow = softSurface,
-        surfaceContainer = if (oled) Color.Black else if (isLight) Color(0xFFE8EAF4) else Color(0xFF1D2A40),
-        surfaceContainerHigh = if (oled) Color.Black else if (isLight) Color(0xFFE0E3EF) else Color(0xFF24334C),
-        surfaceContainerHighest = if (oled) Color.Black else if (isLight) Color(0xFFD9DDEA) else Color(0xFF2A3A55),
+        surfaceContainer = if (oled) {
+            Color.Black
+        } else if (isLight) {
+            Color(0xFFE8EAF4)
+        } else {
+            Color(0xFF1D2A40)
+        },
+        surfaceContainerHigh = if (oled) {
+            Color.Black
+        } else if (isLight) {
+            Color(0xFFE0E3EF)
+        } else {
+            Color(0xFF24334C)
+        },
+        surfaceContainerHighest = if (oled) {
+            Color.Black
+        } else if (isLight) {
+            Color(0xFFD9DDEA)
+        } else {
+            Color(0xFF2A3A55)
+        },
         outlineVariant = if (isLight) Color(0xFFD2D6E5) else Color(0xFF34445F),
     )
 }

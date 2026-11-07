@@ -77,8 +77,8 @@ import com.inspiredandroid.kai.Version
 import com.inspiredandroid.kai.data.EmailAccount
 import com.inspiredandroid.kai.data.Service
 import com.inspiredandroid.kai.linux.LinuxDistro
-import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.components.HolographicBrain
+import com.inspiredandroid.kai.ui.components.VerticalScrollbarForScroll
 import com.inspiredandroid.kai.ui.handCursor
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardBorder
 import com.inspiredandroid.kai.ui.kaiAdaptiveCardColors

@@ -30,20 +30,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.inspiredandroid.kai.ui.chat.ChatActions
 import com.inspiredandroid.kai.ui.components.HeartBrainDuo
 import com.inspiredandroid.kai.ui.components.NiaVisualState
-import com.inspiredandroid.kai.ui.chat.ChatActions
 import com.inspiredandroid.kai.ui.handCursor
 import kai.composeapp.generated.resources.Res
 import kai.composeapp.generated.resources.ic_volume_off
 import kai.composeapp.generated.resources.ic_volume_up
 import kai.composeapp.generated.resources.toggle_speech_output_content_description
-import nl.marc_apps.tts.TextToSpeechInstance
-import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.resources.vectorResource
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import nl.marc_apps.tts.TextToSpeechInstance
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
 
 @Composable
 internal fun TopBar(

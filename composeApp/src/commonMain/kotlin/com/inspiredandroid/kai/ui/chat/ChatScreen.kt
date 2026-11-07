@@ -977,7 +977,7 @@ private fun ChatModeScreen(
                     hasError = uiState.error != null,
                     textToSpeech = textToSpeech,
                     onVoiceConversationActiveChange = { isVoiceConversationActive = it },
-                onVoiceVisualStateChange = { niaVisualState = it },
+                    onVoiceVisualStateChange = { niaVisualState = it },
                 )
             }
         }
