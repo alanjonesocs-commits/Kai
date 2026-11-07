@@ -1940,8 +1940,7 @@ class RemoteDataRepository(
 
     override fun getMemories(): List<MemoryEntry> = memoryStore.getAllMemories()
 
-    override suspend fun storeMemory(key: String, content: String): MemoryEntry =
-        memoryStore.store(key, content, source = "manual_settings")
+    override suspend fun storeMemory(key: String, content: String): MemoryEntry = memoryStore.store(key, content, source = "manual_settings")
 
     override suspend fun deleteMemory(id: String) {
         memoryStore.forgetById(id)
