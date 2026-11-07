@@ -1,5 +1,9 @@
 name: NIA15 Snapshot Integrity Hardening
 
+concurrency:
+  group: nia15-snapshot-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
