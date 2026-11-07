@@ -57,7 +57,7 @@ jobs:
             ./gradlew :androidApp:connectedFossDebugAndroidTest --no-daemon --stacktrace
             test_status=$?
             mkdir -p reports
-            adb logcat -d -s NIA_DIAG > reports/nia-memory-diagnostic-logcat.txt || true
+            adb logcat -d -v threadtime -s 'NIA_DIAG:V' 'Platform:V' > reports/nia-memory-diagnostic-logcat.txt || true
             exit "$test_status"
 
       - name: Upload Android instrumentation reports
