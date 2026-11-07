@@ -135,6 +135,15 @@ class GenerationActivationTests(unittest.TestCase):
         path.write_bytes(nia.canonical_json(doc))
         return path
 
+    def test_status_reports_empty_then_active_generation(self):
+        self.assertEqual(nia.status_index(self.root)["decision"], "EMPTY")
+        doc = snapshot()
+        nia.index_snapshot(self.put(doc, "status.json"), self.root)
+        status = nia.status_index(self.root)
+        self.assertEqual(status["decision"], "READY")
+        self.assertEqual(status["current"], doc["envelope_hash"])
+        self.assertEqual(status["metadata"]["snapshot_id"], doc["snapshot_id"])
+
     def test_first_activation_and_index_permissions(self):
         path = self.put(snapshot(), "first.json")
         result = nia.index_snapshot(path, self.root)
