@@ -114,6 +114,25 @@ class CanonicalAndParsingTests(unittest.TestCase):
         with self.assertRaisesRegex(nia.SnapshotError, "RECORDS_HASH_MISMATCH"):
             nia.validate_snapshot(changed)
 
+    def test_embedded_generation_counter_cannot_authorise_unsigned_auto_activation(self):
+        first = snapshot("generation-first", [record("g1", "key", "First.")], 1, "NIA15")
+        nia.index_snapshot(self.put(first, "generation-first.json"), self.root)
+        second = snapshot("generation-second", [record("g2", "key", "Second.")], 2, "NIA15")
+        result = nia.index_snapshot(self.put(second, "generation-second.json"), self.root)
+        self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+        approved = self.approve(second)
+        self.assertEqual(approved["decision"], "APPROVED_AND_INDEXED")
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
+
+    def test_generation_counter_replay_is_rejected_even_when_snapshot_is_unsigned(self):
+        first = snapshot("generation-current", [record("g2", "key", "Current.")], 2, "NIA15")
+        nia.index_snapshot(self.put(first, "generation-current.json"), self.root)
+        older = snapshot("generation-old", [record("g1", "key", "Older.")], 1, "NIA15")
+        with self.assertRaisesRegex(nia.SnapshotError, "SOURCE_GENERATION_NOT_NEWER"):
+            nia.index_snapshot(self.put(older, "generation-old.json"), self.root)
+        self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
+
     def test_duplicate_record_keys_allowed_but_duplicate_ids_rejected(self):
         a = record("id-a", "same-key", "Reported Room A")
         b = record("id-b", "same-key", "Reported Room B")
@@ -134,6 +153,18 @@ class GenerationActivationTests(unittest.TestCase):
         path = Path(self.temp.name) / name
         path.write_bytes(nia.canonical_json(doc))
         return path
+
+    def stage_for_approval(self, doc, name):
+        result = nia.index_snapshot(self.put(doc, name), self.root)
+        self.assertEqual(result["decision"], "NEEDS_VERIFICATION")
+        return result
+
+    def approve(self, doc):
+        return nia.approve_pending(
+            self.root,
+            doc["envelope_hash"],
+            f"ACTIVATE {doc['envelope_hash']}",
+        )
 
     def test_history_write_failure_does_not_undo_durable_activation(self):
         doc = snapshot("history-failure")
@@ -229,7 +260,7 @@ class GenerationActivationTests(unittest.TestCase):
         first = snapshot("first", [record("r1", "k", "one")], 1, "authority")
         nia.index_snapshot(self.put(first, "first.json"), self.root)
         changed = snapshot("second", [record("r2", "k", "two")], 2, "authority")
-        path = self.put(changed, "second.json")
+        self.stage_for_approval(changed, "second.json")
         real_replace = os.replace
 
         def fail_current(src, dst):
@@ -239,7 +270,7 @@ class GenerationActivationTests(unittest.TestCase):
 
         with patch.object(nia.os, "replace", side_effect=fail_current):
             with self.assertRaises(OSError):
-                nia.index_snapshot(path, self.root)
+                self.approve(changed)
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
         self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
         self.assertFalse((self.root / "CURRENT.tmp").exists())
@@ -248,6 +279,7 @@ class GenerationActivationTests(unittest.TestCase):
         first = snapshot("reuse-first", [record("r1", "k", "First.")], 1, "NIA15")
         second = snapshot("reuse-second", [record("r2", "k", "Second.")], 2, "NIA15")
         nia.index_snapshot(self.put(first, "reuse-first.json"), self.root)
+        self.stage_for_approval(second, "reuse-second.json")
         final_dir = self.root / "generations" / second["envelope_hash"]
         real_write_synced = nia._write_synced
 
@@ -258,19 +290,19 @@ class GenerationActivationTests(unittest.TestCase):
 
         with patch.object(nia, "_write_synced", side_effect=fail_current_pointer):
             with self.assertRaisesRegex(OSError, "generation rename"):
-                nia.index_snapshot(self.put(second, "reuse-second.json"), self.root)
+                self.approve(second)
         self.assertTrue((final_dir / "index.sqlite").is_file())
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
 
-        retried = nia.index_snapshot(self.put(second, "reuse-second-retry.json"), self.root)
-        self.assertEqual(retried["decision"], "INDEXED")
+        retried = self.approve(second)
+        self.assertEqual(retried["decision"], "APPROVED_AND_INDEXED")
         self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
 
     def test_post_replace_pre_directory_fsync_keeps_complete_generation(self):
         first = snapshot("first", [record("r1", "k", "one")], 1, "authority")
         nia.index_snapshot(self.put(first, "first.json"), self.root)
         changed = snapshot("second", [record("r2", "k", "two")], 2, "authority")
-        path = self.put(changed, "second.json")
+        self.stage_for_approval(changed, "second.json")
         real_fsync_dir = nia._fsync_dir
 
         def fail_root_sync(target):
@@ -280,7 +312,7 @@ class GenerationActivationTests(unittest.TestCase):
 
         with patch.object(nia, "_fsync_dir", side_effect=fail_root_sync):
             with self.assertRaises(OSError):
-                nia.index_snapshot(path, self.root)
+                self.approve(changed)
         self.assertEqual((self.root / "CURRENT").read_text().strip(), changed["envelope_hash"])
         self.assertEqual(nia.recover_index(self.root)["current"], changed["envelope_hash"])
 
@@ -316,7 +348,8 @@ class GenerationActivationTests(unittest.TestCase):
         first = snapshot("rollback-first", [record("first", "desk", "A fictional wooden desk.")], 1, "NIA15")
         second = snapshot("rollback-second", [record("second", "chair", "A fictional blue chair.")], 2, "NIA15")
         first_result = nia.index_snapshot(self.put(first, "rollback-first.json"), self.root)
-        second_result = nia.index_snapshot(self.put(second, "rollback-second.json"), self.root)
+        self.stage_for_approval(second, "rollback-second.json")
+        second_result = self.approve(second)
         self.assertEqual((self.root / "CURRENT").read_text().strip(), second["envelope_hash"])
         rollback = nia.rollback_generation(self.root, first["envelope_hash"])
         self.assertEqual(rollback["decision"], "ROLLED_BACK")
@@ -333,6 +366,7 @@ class GenerationActivationTests(unittest.TestCase):
         first = snapshot("crash-empty-first", [record("first", "key", "First.")], 1, "NIA15")
         second = snapshot("crash-empty-second", [record("second", "key", "Second.")], 2, "NIA15")
         nia.index_snapshot(self.put(first, "empty-first.json"), self.root)
+        self.stage_for_approval(second, "empty-second.json")
         real_write = os.write
 
         def fail_before_pointer_bytes(fd, data):
@@ -343,7 +377,7 @@ class GenerationActivationTests(unittest.TestCase):
 
         with patch.object(nia.os, "write", side_effect=fail_before_pointer_bytes):
             with self.assertRaises(OSError):
-                nia.index_snapshot(self.put(second, "empty-second.json"), self.root)
+                self.approve(second)
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
         self.assertEqual((self.root / "CURRENT.tmp").stat().st_size, 0)
         self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
@@ -353,6 +387,7 @@ class GenerationActivationTests(unittest.TestCase):
         first = snapshot("crash-full-first", [record("first", "key", "First.")], 1, "NIA15")
         second = snapshot("crash-full-second", [record("second", "key", "Second.")], 2, "NIA15")
         nia.index_snapshot(self.put(first, "full-first.json"), self.root)
+        self.stage_for_approval(second, "full-second.json")
         real_fsync = os.fsync
 
         def fail_before_pointer_fsync(fd):
@@ -363,7 +398,7 @@ class GenerationActivationTests(unittest.TestCase):
 
         with patch.object(nia.os, "fsync", side_effect=fail_before_pointer_fsync):
             with self.assertRaises(OSError):
-                nia.index_snapshot(self.put(second, "full-second.json"), self.root)
+                self.approve(second)
         self.assertEqual((self.root / "CURRENT").read_text().strip(), first["envelope_hash"])
         self.assertEqual((self.root / "CURRENT.tmp").read_text().strip(), second["envelope_hash"])
         self.assertEqual(nia.recover_index(self.root)["current"], first["envelope_hash"])
