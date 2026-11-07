@@ -50,8 +50,8 @@ class NiaMemorySnapshotBuilderTest {
             ),
         ).jsonObject
 
-        assertEquals("nia-memory-snapshot", document["format"]?.jsonPrimitive?.content)
-        assertEquals("1.0.0", document["schema_version"]?.jsonPrimitive?.content)
+        assertEquals("1.1.0", document["schema_version"]?.jsonPrimitive?.content)
+        assertNotNull(document["envelope_hash"])
         assertEquals("snap-synthetic-001", document["snapshot_id"]?.jsonPrimitive?.content)
         assertEquals(1, document["record_count"]?.jsonPrimitive?.content?.toInt())
         assertEquals(64, document["records_hash"]?.jsonPrimitive?.content?.length)
@@ -162,7 +162,7 @@ class NiaMemorySnapshotBuilderTest {
             NiaMemorySnapshotBuilder.buildFromRawJson("""[{"a":1,"a":2}]""")
         }
         assertFailsWith<IllegalArgumentException> {
-            NiaMemorySnapshotBuilder.buildFromRawJson("""[{"a":1,"\\u0061":2}]""")
+            NiaMemorySnapshotBuilder.buildFromRawJson("[{\"a\":1,\"\\\\u0061\":2}]")
         }
         assertFailsWith<IllegalArgumentException> {
             NiaMemorySnapshotBuilder.buildFromRawJson("""[{"unknown":{"nested":1,"nested":2}}]""")
@@ -175,8 +175,8 @@ class NiaMemorySnapshotBuilderTest {
             """[{"unknown":-0}]""",
             """[{"unknown":1.0}]""",
             """[{"unknown":1e2}]""",
-            """[{"unknown":"\\ud800"}]""",
-            """[{"unknown":"\\udc00"}]""",
+            "[{\"unknown\":\"\\\\ud800\"}]",
+            "[{\"unknown\":\"\\\\udc00\"}]",
         )) {
             assertFailsWith<IllegalArgumentException> {
                 NiaMemorySnapshotBuilder.buildFromRawJson(raw)
