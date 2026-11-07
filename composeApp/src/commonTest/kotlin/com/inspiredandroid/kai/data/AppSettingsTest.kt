@@ -1,6 +1,7 @@
 package com.inspiredandroid.kai.data
 
 import com.russhwolf.settings.MapSettings
+import com.russhwolf.settings.Settings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -239,15 +240,35 @@ class AppSettingsTest {
         assertTrue(instances.any { it.serviceId == Service.OpenAI.id })
         assertTrue(instances.any { it.serviceId == Service.Gemini.id })
     }
-    
-    @Test
-    fun `raw memory getter distinguishes missing store from stored empty array`() {
-        val settings = MapSettings()
-        val appSettings = AppSettings(settings)
 
-        assertEquals(null, appSettings.getMemoriesJsonOrNull())
+    @Test
+    fun `snapshot memory reader distinguishes missing present blank and unreadable`() {
+        val backing = MapSettings()
+        val appSettings = AppSettings(backing)
+
+        assertEquals(RawMemoryJsonReadResult.Missing, appSettings.readMemoriesJsonForSnapshot())
 
         appSettings.setMemoriesJson("[]")
-        assertEquals("[]", appSettings.getMemoriesJsonOrNull())
+        assertEquals(RawMemoryJsonReadResult.Present("[]"), appSettings.readMemoriesJsonForSnapshot())
+
+        appSettings.setMemoriesJson("  ")
+        assertEquals(RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_BLANK"), appSettings.readMemoriesJsonForSnapshot())
+    }
+
+    @Test
+    fun `snapshot memory reader maps settings read exceptions to unreadable not missing`() {
+        val backing = MapSettings()
+        val failing = object : Settings by backing {
+            override fun getStringOrNull(key: String): String? {
+                if (key == "agent_memories") throw IllegalStateException("simulated encrypted read failure")
+                return backing.getStringOrNull(key)
+            }
+        }
+        val appSettings = AppSettings(failing)
+
+        assertEquals(
+            RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_READ_FAILED"),
+            appSettings.readMemoriesJsonForSnapshot(),
+        )
     }
 }

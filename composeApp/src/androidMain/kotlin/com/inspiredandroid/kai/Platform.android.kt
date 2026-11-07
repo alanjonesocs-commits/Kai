@@ -136,15 +136,10 @@ actual fun getAppFilesDirectory(): String {
 // secure settings store API keys, email passwords, and conversation encryption keys.
 actual fun createSecureSettings(): Settings {
     val context: Context by inject(Context::class.java)
-    return try {
-        SharedPreferencesSettings(createEncryptedPrefs(context))
-    } catch (_: Exception) {
-        // AEADBadTagException occurs when Android Auto Backup restores the encrypted
-        // prefs file but the Keystore key is hardware-bound and doesn't transfer.
-        // Delete the corrupted file and recreate fresh encrypted prefs.
-        context.deleteSharedPreferences("kai_secure_prefs")
-        SharedPreferencesSettings(createEncryptedPrefs(context))
-    }
+    // Never delete or recreate encrypted preferences after a Keystore/decryption
+    // failure. The old behaviour could erase the only copy of canonical memories.
+    // Fail closed and preserve the encrypted file for recovery instead.
+    return SharedPreferencesSettings(createEncryptedPrefs(context))
 }
 
 private fun createEncryptedPrefs(context: Context): android.content.SharedPreferences {

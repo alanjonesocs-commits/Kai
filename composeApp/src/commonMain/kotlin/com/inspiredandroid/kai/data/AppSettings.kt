@@ -31,6 +31,13 @@ enum class ThemeMode {
     OledBlack,
 }
 
+/** A single, read-only result for snapshot access to the canonical memory setting. */
+sealed interface RawMemoryJsonReadResult {
+    data class Present(val rawJson: String) : RawMemoryJsonReadResult
+    data object Missing : RawMemoryJsonReadResult
+    data class Unreadable(val reasonCode: String) : RawMemoryJsonReadResult
+}
+
 /**
  * Stricter than [detectImportSections]: only includes sections that contain actual user data,
  * skipping ones that exist purely because of default feature-toggle flags (e.g. `sms_enabled = false`,
@@ -267,6 +274,27 @@ class AppSettings(internal val settings: Settings) {
 
     /** Returns the stored memory JSON without inventing an empty default when the key is absent. */
     fun getMemoriesJsonOrNull(): String? = settings.getStringOrNull(KEY_AGENT_MEMORIES)
+
+    /**
+     * Reads the canonical memory key exactly once for a read-only snapshot. Any
+     * encrypted-settings, Keystore, or I/O exception remains Unreadable; it is
+     * never translated into Missing or an empty JSON array.
+     */
+    fun readMemoriesJsonForSnapshot(): RawMemoryJsonReadResult = try {
+        when (val raw = settings.getStringOrNull(KEY_AGENT_MEMORIES)) {
+            null -> RawMemoryJsonReadResult.Missing
+
+            "" -> RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_BLANK")
+
+            else -> if (raw.isBlank()) {
+                RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_BLANK")
+            } else {
+                RawMemoryJsonReadResult.Present(raw)
+            }
+        }
+    } catch (_: Exception) {
+        RawMemoryJsonReadResult.Unreadable("MEMORY_STORE_READ_FAILED")
+    }
 
     /**
      * Keeps a persisted JSON blob that no longer decodes (e.g. after a schema change without a

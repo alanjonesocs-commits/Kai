@@ -1,0 +1,111 @@
+name: NIA15 Snapshot Integrity Hardening
+
+concurrency:
+  group: nia15-snapshot-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - build/nia15-snapshot-1.1-hardening
+    paths:
+      - "tools/nia-memory-indexer/**"
+      - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/Platform.android.kt"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt"
+      - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt"
+      - ".github/workflows/nia15-snapshot-1.1-hardening.yml"
+  pull_request:
+    branches:
+      - fix/nia15-readonly-memory-snapshot
+    paths:
+      - "tools/nia-memory-indexer/**"
+      - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/Platform.android.kt"
+      - "composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt"
+      - "composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/**"
+      - "composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt"
+      - ".github/workflows/nia15-snapshot-1.1-hardening.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-debian:
+    name: Synthetic Debian indexer tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Python and SQLite FTS5
+        run: |
+          python --version
+          python - <<'PY'
+          import sqlite3
+          db = sqlite3.connect(":memory:")
+          db.execute("CREATE VIRTUAL TABLE fts_probe USING fts5(content)")
+          print("SQLite FTS5:", sqlite3.sqlite_version)
+          PY
+      - name: Compile and run synthetic-only indexer tests
+        working-directory: tools/nia-memory-indexer
+        run: |
+          python -m compileall -q .
+          python -m unittest -v
+
+  android-safety-and-build:
+    name: Android tests, formatting and FOSS APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "build-tools;29.0.3"
+      - name: Grant Gradle wrapper permission
+        run: chmod +x ./gradlew
+      - name: Format candidate Kotlin files without changing unrelated baseline files
+        run: |
+          ./gradlew spotlessApply --no-daemon --stacktrace
+          git checkout -- \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/ui/chat/composables/VoiceConversationControl.android.kt \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/voice/NiaAndroidAudioEngine.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/App.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/nia/memory/MemoryBridge.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/ui/home/BrainDashboardScreen.kt
+          for file in \
+            composeApp/src/androidMain/kotlin/com/inspiredandroid/kai/nia/retrieval/NiaMemorySnapshotBuilder.kt \
+            composeApp/src/commonMain/kotlin/com/inspiredandroid/kai/data/AppSettings.kt \
+            composeApp/src/commonTest/kotlin/com/inspiredandroid/kai/data/AppSettingsTest.kt \
+            composeApp/src/androidHostTest/kotlin/com/inspiredandroid/kai/nia/retrieval/NiaMemorySnapshotBuilderTest.kt; do
+            echo "FORMAT_SOURCE_BEGIN:$file"
+            base64 -w0 "$file"
+            echo
+            echo "FORMAT_SOURCE_END:$file"
+          done
+      - name: Android host and settings regression tests
+        run: |
+          ./gradlew :composeApp:testAndroidHostTest --no-daemon --stacktrace
+          ./gradlew :composeApp:desktopTest --tests "com.inspiredandroid.kai.data.AppSettingsTest" --no-daemon --stacktrace
+      - name: Full desktop regression suite
+        run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
+      - name: Build FOSS debug APK
+        run: ./gradlew :androidApp:assembleFossDebug -x updateScreenshots --no-daemon --stacktrace
+      - name: Upload FOSS debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nia15-snapshot-hardening-foss-debug-apk
+          path: androidApp/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
