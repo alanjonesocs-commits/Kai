@@ -206,7 +206,7 @@ private fun LocalSaveBanner(
     }
     val message = when {
         isSavePending -> "SAVE PENDING — awaiting local database confirmation"
-        hasConfirmedSave -> "LOCAL SAVE CONFIRMED · ID ${lastSavedId!!.take(6)}… · ${formatSaveTime(lastSavedAt!!)}"
+        hasConfirmedSave -> "LAST LOCAL SAVE CONFIRMED · ID ${lastSavedId!!.take(6)}… · ${formatSaveTime(lastSavedAt!!)}"
         else -> "UNVERIFIED — NOT SAVED TO PHONE"
     }
 
