@@ -530,7 +530,7 @@ def _activate(
                 shutil.rmtree(temp, ignore_errors=True)
             raise
     pointer_tmp = root / "CURRENT.tmp"
-    _write_synced(pointer_tmp, (doc["envelope_hash"] + "\\n").encode("ascii"))
+    _write_synced(pointer_tmp, (doc["envelope_hash"] + "\n").encode("ascii"))
     os.replace(pointer_tmp, root / "CURRENT")
     _fsync_dir(root)
     return _record_history(
@@ -778,10 +778,24 @@ def rollback_generation(root: Path, envelope_hash: str) -> dict[str, Any]:
             raise SnapshotError("GENERATION_INVALID") from exc
         previous, _active = _read_current(root)
         temp = root / "CURRENT.rollback.tmp"
-        _write_synced(temp, (envelope_hash + "\\n").encode("ascii"))
+        _write_synced(temp, (envelope_hash + "\n").encode("ascii"))
         os.replace(temp, root / "CURRENT")
         _fsync_dir(root)
-        return {"decision": "ROLLED_BACK", "envelope_hash": envelope_hash, "previous": previous}
+        history_written = _record_history(
+            root,
+            event_type="ROLLED_BACK",
+            previous_envelope_hash=previous,
+            envelope_hash=envelope_hash,
+            snapshot_id=meta.get("snapshot_id", ""),
+            records_hash=meta.get("records_hash", ""),
+            approval_method="EXPLICIT_ROLLBACK",
+        )
+        return {
+            "decision": "ROLLED_BACK",
+            "envelope_hash": envelope_hash,
+            "previous": previous,
+            "history_status": "RECORDED" if history_written else "WRITE_FAILED",
+        }
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
