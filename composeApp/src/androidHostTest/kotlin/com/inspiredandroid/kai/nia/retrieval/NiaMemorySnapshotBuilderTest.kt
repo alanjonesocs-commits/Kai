@@ -1,12 +1,12 @@
 package com.inspiredandroid.kai.nia.retrieval
 
 import com.inspiredandroid.kai.data.AppSettings
-import com.russhwolf.settings.MapSettings
-import com.russhwolf.settings.Settings
 import com.inspiredandroid.kai.data.MemoryAssessment
 import com.inspiredandroid.kai.data.MemoryCategory
 import com.inspiredandroid.kai.data.MemoryEntry
 import com.inspiredandroid.kai.data.MemoryProvenance
+import com.russhwolf.settings.MapSettings
+import com.russhwolf.settings.Settings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
